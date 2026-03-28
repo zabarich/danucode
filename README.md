@@ -4,9 +4,11 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-20%2B-brightgreen)](https://nodejs.org)
 
-Local LLM coding assistant for your terminal. Point it at any OpenAI-compatible API and get an agentic coding tool with file operations, search, shell access, and sub-agents.
+Backend-agnostic terminal coding agent. Early-stage, hackable, runs locally.
 
-Works with any OpenAI-compatible backend (llama.cpp, Ollama, vLLM, OpenAI, Anthropic, etc).
+Runs on any OpenAI-compatible API — point it at llama.cpp, Ollama, vLLM, or a remote provider. Gives you shell, file, web and sub-agent tools with project memory and persistent sessions.
+
+> **Status:** Experimental. This is an early framework, not a production tool. It works for simple coding tasks with capable models but lacks the polish, test coverage and battle-testing of mature alternatives like Aider, Claude Code or Codex CLI. Use it to learn, tinker, and build on.
 
 **(c) Danucore** | [Security Model](SECURITY.md) | [Changelog](CHANGELOG.md) | [Demos](docs/demos/)
 

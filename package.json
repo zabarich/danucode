@@ -13,7 +13,7 @@
   },
   "license": "MIT",
   "author": "Danucore",
-  "description": "Local LLM coding assistant for your terminal. Works with any OpenAI-compatible API.",
+  "description": "Backend-agnostic terminal coding agent. Hackable, runs locally, works with any OpenAI-compatible API.",
   "dependencies": {
     "chalk": "^5.4.1",
     "glob": "^11.0.0",
