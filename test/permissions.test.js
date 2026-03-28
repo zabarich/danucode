@@ -13,11 +13,9 @@ describe('Permission system', () => {
     resetSessionPermissions();
   });
 
-  it('blocks by default when no handler and no rl', async () => {
-    // With no handler and no rl, askPermission returns true (fallback)
-    // This tests the fallback path
+  it('denies by default when no handler and no rl (fail closed)', async () => {
     const result = await askPermission('Bash', { command: 'ls' }, null);
-    assert.equal(result, true); // Falls through with no handler
+    assert.equal(result, false); // Fail closed — deny when no permission path
   });
 
   it('allows everything in yolo mode', async () => {
@@ -41,9 +39,9 @@ describe('Permission system', () => {
     const r2 = await askPermission('Bash', { command: 'echo hi' }, null);
     assert.equal(r2, true); // Session-allowed
 
-    // Different tool should NOT be session-allowed
-    // (falls through to no-handler fallback which returns true —
-    // but in real usage there would be a handler or rl)
+    // Different tool should NOT be session-allowed — denied (fail closed)
+    const r3 = await askPermission('Write', { file_path: '/tmp/test' }, null);
+    assert.equal(r3, false);
   });
 
   it('resets session permissions', async () => {
@@ -53,10 +51,9 @@ describe('Permission system', () => {
     setPermissionHandler(null);
 
     resetSessionPermissions();
-    // After reset, Write is no longer session-allowed
-    // Falls through to no-handler fallback
+    // After reset, Write is no longer session-allowed — denied (fail closed)
     const result = await askPermission('Write', { file_path: '/tmp/test' }, null);
-    assert.equal(result, true); // Fallback — no handler, no rl
+    assert.equal(result, false);
   });
 
   it('denies when handler returns n', async () => {

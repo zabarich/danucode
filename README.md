@@ -4,47 +4,46 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-20%2B-brightgreen)](https://nodejs.org)
 
-The simplest agent shell for your own models.
+**The simplest agent shell for your own models.**
 
-An agentic coding tool for your terminal where nothing leaves your network. For developers running Ollama, llama.cpp, vLLM, or any OpenAI-compatible endpoint who want the Claude Code workflow without vendor lock-in, cloud accounts, or subscriptions. For security-conscious teams, regulated industries, or anyone who just wants their code to stay on their machine.
+An agentic coding tool for your terminal where nothing leaves your network. Point it at Ollama, llama.cpp, vLLM, or any OpenAI-compatible endpoint. No account, no subscription, no cloud.
 
-Three fields in a config file and you're running:
+```
+$ danu
 
-```json
-{
-  "base_url": "http://localhost:11434/v1",
-  "api_key": "ollama",
-  "model": "qwen2.5-coder:32b"
-}
+  ____                                 _
+ |  _ \  __ _ _ __  _   _  ___ ___   __| | ___
+ | | | |/ _` | '_ \| | | |/ __/ _ \ / _` |/ _ \
+ | |_| | (_| | | | | |_| | (_| (_) | (_| |  __/
+ |____/ \__,_|_| |_|\__,_|\___\___/ \__,_|\___|
+
+  v0.1.0 · qwen2.5-coder:32b · localhost:11434  (c) Danucore
+
+❯ find the bug in src/auth.js and fix it
+
+  ● Read  src/auth.js
+    1  import bcrypt from 'bcrypt';
+    2  ...
+    ✓
+  ● Edit  src/auth.js
+    [-] const valid = await bcrypt.compare(password, user.passwordHash);
+    [+] if (!user) return { error: 'Invalid credentials' };
+    [+] const valid = await bcrypt.compare(password, user.passwordHash);
+    ✓
+
+Added null check for user before accessing passwordHash.
 ```
 
-> **Status:** Experimental framework, not a production tool. Works for real tasks with capable models, but lacks the polish and battle-testing of Aider, Claude Code, or Codex CLI. Use it to learn, tinker, and build on.
-
-**(c) Danucore** | [Security Model](SECURITY.md) | [Changelog](CHANGELOG.md) | [Demos](docs/demos/)
-
-## Why This Exists
-
-The mature coding agents are excellent but opinionated:
-- **Claude Code** — Claude-only, requires Anthropic subscription
-- **Codex CLI** — OpenAI-only, Rust, heavier setup
-- **Aider** — Python, large dependency tree, opinionated git workflow
-
-If you're already running a local model and want something lighter — a transparent tool-calling loop you can read, modify, and point at any backend — that's what Danucode is.
-
-**What it does better than the alternatives:** zero-config local setup. No account, no cloud, no subscription. Point it at your inference server and go.
-
-**What the alternatives do better than it:** everything else. They have years of development, millions of users, real sandboxing, extensive test suites, and production hardening. Danucode has ~4,000 lines of JavaScript and one afternoon of development.
-
-## Quick Start
+## Get Running in 60 Seconds
 
 ```bash
 git clone https://github.com/zabarich/danucode.git
 cd danucode
 npm install
-npm link       # installs 'danu' as a global command
+npm link
 ```
 
-Create `~/.danu/config.json`:
+Create `~/.danu/config.json` — three fields, that's it:
 
 ```json
 {
@@ -54,101 +53,114 @@ Create `~/.danu/config.json`:
 }
 ```
 
-Then from any project directory:
-
 ```bash
-danu                              # interactive
-danu --yolo                       # skip permission prompts
-danu -c "fix the bug in main.js"  # one-shot
-danu --session myproject           # persistent session
-danu doctor                        # check your setup
+danu                    # interactive
+danu --yolo             # skip permission prompts
+danu -c "fix the bug"  # one-shot
+danu doctor             # check your setup
 ```
+
+## Why Danucode
+
+| | Danucode | Claude Code | Aider | Codex CLI |
+|---|---|---|---|---|
+| **Local models** | Any OpenAI-compatible | Claude only | Yes (some friction) | OpenAI only |
+| **No cloud required** | Yes | No | Partial | No |
+| **Setup** | 3-field JSON | Anthropic account + key | pip install + config | OpenAI account + key |
+| **Code stays local** | Always | Sent to Anthropic | Depends on model | Sent to OpenAI |
+| **Cost** | Free (you run the model) | Subscription | Free + API costs | Free + API costs |
+| **Maturity** | Early-stage | Production | Mature | Production |
+| **Test coverage** | Thin | Extensive | Extensive | Extensive |
+| **Community** | New | Large | 42k stars | Large |
+
+**Danucode's advantage:** zero-config local setup, complete data privacy, no vendor lock-in.
+
+**Where alternatives win:** maturity, polish, test coverage, community, sandboxing, edge-case handling.
 
 ## How It Works
 
-Danucode runs the same loop as every agentic coding tool:
+The same loop as every agentic coding tool:
 
 1. You type a message
-2. It sends your message + tool definitions to the LLM
-3. The LLM responds with text or tool calls (e.g., "read this file", "run this command")
-4. Danucode executes the tools locally and sends results back
-5. Repeat until the LLM responds with just text
-
-That's it. The rest is scaffolding: which tools exist, how permissions work, how context is managed.
-
-## Configuration
-
-Danucode loads config from (in order, later overrides earlier):
-1. `~/.danu/config.json` (user-level)
-2. `./danu.config.json` (project-level)
-3. `--config <path>` (CLI override)
-
-See `danu.config.example.json` for all options including search provider, timeout, and context limits.
-
-### Example Configs
-
-**Ollama:**
-```json
-{ "base_url": "http://localhost:11434/v1", "api_key": "ollama", "model": "qwen2.5-coder:32b" }
-```
-
-**llama.cpp:**
-```json
-{ "base_url": "http://localhost:8080/v1", "api_key": "none", "model": "my-model.gguf" }
-```
-
-**vLLM:**
-```json
-{ "base_url": "http://localhost:8000/v1", "api_key": "token", "model": "Qwen/Qwen2.5-32B" }
-```
-
-**OpenAI (remote):**
-```json
-{ "base_url": "https://api.openai.com/v1", "api_key": "sk-...", "model": "gpt-4o" }
-```
+2. Danucode sends it + tool definitions to your LLM
+3. The LLM responds with text or tool calls
+4. Tools execute locally, results go back to the LLM
+5. Repeat until done
 
 ## What You Get
 
-**Tools:** Bash, Read, Write, Edit, Grep, Glob, Patch, Agent (sub-agents), WebSearch, WebFetch, GitHub, LSP, NotebookEdit, Tasks
+**Tools:** Bash, Read, Write, Edit, Grep, Glob, Patch, Agent, WebSearch, WebFetch, GitHub, LSP, NotebookEdit, Tasks
 
-**Modes:** `/mode code` (full access), `/mode architect` (read-only + markdown), `/mode ask` (read-only), `/mode debug` (full access, diagnostic prompt)
+**Modes:** `code` (full access) · `architect` (read-only + markdown) · `ask` (read-only) · `debug` (diagnostic focus)
 
-**Plan mode:** `/plan` to explore and design before implementing. Restricts to read-only tools until you approve the plan.
+**Plan mode:** `/plan` to explore and design before implementing
 
-**Project context:** Create a `DANUCODE.md` in your project root (`/init` generates one). Danucode reads it into the system prompt.
+**Project context:** `DANUCODE.md` loaded into the system prompt — `/init` generates one
 
-**Memory:** `/memory save "user prefers TypeScript"` — persists across sessions in `~/.danu/memory/`.
+**Memory:** `/memory save` persists preferences across sessions
 
-**Sessions:** `danu --session myproject` auto-saves and resumes. `/save`, `/resume`, `/history` for manual control.
+**Sessions:** `--session myproject` auto-saves and resumes
 
-**Permissions:** Tools that modify files or run commands ask `y/n/a(lways)` before executing. `--yolo` or `/yolo` to bypass.
+**Permissions:** `y/n/a(lways)` per tool · `--yolo` to bypass
 
-**Hooks:** Configure pre/post tool execution commands in your config.
+**Extensibility:** MCP servers · custom tools in `.danu/tools/` · hooks · configurable search
 
-**Extensibility:** MCP servers, custom tools in `.danu/tools/`, configurable search providers.
+**18 commands:** `/help` `/init` `/plan` `/mode` `/model` `/yolo` `/undo` `/redo` `/compact` `/save` `/resume` `/history` `/memory` `/pr` `/exit` and more
 
-## Commands
+## Demos
 
-`/help` `/init` `/plan` `/mode` `/model` `/yolo` `/undo` `/redo` `/compact` `/save` `/resume` `/history` `/memory` `/pr` `/exit`
+See [docs/demos/](docs/demos/) for realistic usage transcripts:
+- [Basic usage](docs/demos/01-basic-usage.md) — reading code, finding a bug, fixing it
+- [Plan mode](docs/demos/02-plan-mode.md) — designing before implementing
+- [Task workflow](docs/demos/03-task-workflow.md) — breaking work into tracked steps
+
+## Configuration
+
+Config loads from (later overrides earlier):
+1. `~/.danu/config.json` (user)
+2. `./danu.config.json` (project)
+3. `--config <path>` (CLI)
+
+See `danu.config.example.json` for all options.
+
+### Backend Examples
+
+**Ollama:** `{ "base_url": "http://localhost:11434/v1", "api_key": "ollama", "model": "qwen2.5-coder:32b" }`
+
+**llama.cpp:** `{ "base_url": "http://localhost:8080/v1", "api_key": "none", "model": "my-model.gguf" }`
+
+**vLLM:** `{ "base_url": "http://localhost:8000/v1", "api_key": "token", "model": "Qwen/Qwen2.5-32B" }`
+
+**OpenAI:** `{ "base_url": "https://api.openai.com/v1", "api_key": "sk-...", "model": "gpt-4o" }`
 
 ## Testing
 
 ```bash
-npm test    # 25 tests covering tools, permissions, context management
+npm test
 ```
 
-CI runs on Node 20/22 across Linux, Windows, and macOS.
+25 tests covering tool execution, permission boundaries, token estimation, and context management. Node.js built-in test runner, no external framework. CI runs on Node 20/22 across Linux, Windows, and macOS.
 
 ## Security
 
-Danucode gives an LLM shell access and file modification abilities on your machine. Read [SECURITY.md](SECURITY.md) before running with `--yolo`.
+Danucode can execute shell commands and modify files. Read [SECURITY.md](SECURITY.md).
 
-Key points: permission prompts by default, `.danuignore` for sensitive files, mode-based restrictions, no telemetry.
+Key points: permission prompts by default, `.danuignore` for sensitive files, mode-based restrictions, no telemetry, data only goes to your configured endpoint.
 
-## Requirements
+## Roadmap
 
-- Node.js >= 20
-- An OpenAI-compatible API endpoint with tool/function calling support
+Actively developing. Current priorities:
+- [ ] Terminal recording / asciinema demo
+- [ ] Model compatibility matrix (which models work well with tool calling)
+- [ ] Skills system (markdown prompt templates)
+- [ ] Deeper test coverage
+- [ ] Permission fail-closed hardening
+
+See [CHANGELOG.md](CHANGELOG.md) for what's already built.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Bug reports, model compatibility notes, tests, and system prompt improvements are the most impactful contributions right now.
 
 ## License
 

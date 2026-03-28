@@ -52,8 +52,9 @@ export async function askPermission(toolName, args, rl) {
     return choice.startsWith('y');
   }
 
-  // No handler and no rl — allow (shouldn't happen)
-  return true;
+  // No handler and no rl — deny (fail closed)
+  console.log(chalk.red('  Denied: no permission handler available'));
+  return false;
 }
 
 export function resetSessionPermissions() {
