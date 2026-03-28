@@ -7,6 +7,8 @@
 
 **The simplest agent shell for your own models.**
 
+<img src="demo.gif" alt="Danucode demo" />
+
 An agentic coding tool for your terminal where nothing leaves your network. Point it at Ollama, llama.cpp, vLLM, or any OpenAI-compatible endpoint. No account, no subscription, no cloud.
 
 ```
