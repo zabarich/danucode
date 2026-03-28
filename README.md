@@ -67,22 +67,30 @@ danu -c "fix the bug"  # one-shot
 danu doctor             # check your setup
 ```
 
-## Why Danucode
+## Danucode vs Aider vs Claude Code
 
-| | Danucode | Claude Code | Aider | Codex CLI |
-|---|---|---|---|---|
-| **Local models** | Any OpenAI-compatible | Claude only | Yes (some friction) | OpenAI only |
-| **No cloud required** | Yes | No | Partial | No |
-| **Setup** | 3-field JSON | Anthropic account + key | pip install + config | OpenAI account + key |
-| **Code stays local** | Always | Sent to Anthropic | Depends on model | Sent to OpenAI |
-| **Cost** | Free (you run the model) | Subscription | Free + API costs | Free + API costs |
-| **Maturity** | Early-stage | Production | Mature | Production |
-| **Test coverage** | Thin | Extensive | Extensive | Extensive |
-| **Community** | New | Large | 42k stars | Large |
+| | Danucode | Aider | Claude Code |
+|---|---|---|---|
+| **Philosophy** | Simplest possible agent shell. Read the code in an afternoon. | Battle-tested AI pair programmer with deep git integration. | Full agentic coding platform from the model provider. |
+| **Language** | JavaScript (~4k LOC) | Python (large codebase) | Node.js (closed source) |
+| **License** | MIT | Apache 2.0 | Proprietary |
+| **Setup** | `npm i -g danucode` → 3-field JSON | `pip install aider-install` | `npm i -g @anthropic-ai/claude-code` |
+| **Backend** | Any OpenAI-compatible (Ollama, llama.cpp, vLLM, OpenAI, etc.) | Any OpenAI-compatible, plus native Claude, Gemini, DeepSeek | Claude only (Opus/Sonnet) |
+| **Local-only / air-gapped** | First-class. Zero cloud dependency. | With local models via Ollama etc. | Requires Anthropic account + API |
+| **Account required** | No | No (bring your own key) | Yes (Claude subscription or API key) |
+| **Git integration** | Manual | Automatic commits, smart messages, auto-stage | Automatic commits, branches, PRs |
+| **Codebase mapping** | No | Repo-map for large projects | Full codebase awareness |
+| **Modes** | code, architect, ask, debug | code, architect, ask | Interactive, headless, background agents |
+| **Plan before execute** | `/plan` | `/architect` | Via extended thinking |
+| **IDE integration** | Terminal only | VS Code, in-editor comments | VS Code, JetBrains, web, mobile |
+| **MCP support** | Configurable | No | Extensive |
+| **Sub-agents** | Agent tool | No | Agent Teams |
+| **Lint / test loop** | Manual | Auto-lint and auto-test | Auto-test |
+| **Session persistence** | `--session`, `/save`, `/resume` | Chat history | Sessions, `/rewind` |
+| **Permissions** | y/n/always per tool, `--yolo` | Edits directly | y/n/always, `--dangerously-skip-permissions` |
+| **Maturity** | Experimental (weeks old) | Production (years, large community) | Production (Anthropic-backed) |
 
-**Danucode's advantage:** zero-config local setup, complete data privacy, no vendor lock-in.
-
-**Where alternatives win:** maturity, polish, test coverage, community, sandboxing, edge-case handling.
+**Honest take:** If you want the most capable tool, use Claude Code. If you want proven open-source with broad model support, use Aider. If you want something you can fully understand, modify, and point at your own infrastructure with zero external dependencies — that's what Danucode is for.
 
 ## How It Works
 
