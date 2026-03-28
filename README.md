@@ -75,7 +75,7 @@ danu doctor             # check your setup
 | **Language** | JavaScript (~4k LOC) | Python (large codebase) | Node.js (closed source) |
 | **License** | MIT | Apache 2.0 | Proprietary |
 | **Setup** | `npm i -g danucode` → 3-field JSON | `pip install aider-install` | `npm i -g @anthropic-ai/claude-code` |
-| **Backend** | Any OpenAI-compatible (Ollama, llama.cpp, vLLM, OpenAI, etc.) | Any OpenAI-compatible, plus native Claude, Gemini, DeepSeek | Claude only (Opus/Sonnet) |
+| **Backend** | Any OpenAI-compatible + native Anthropic (Ollama, llama.cpp, vLLM, OpenAI, Anthropic) | Any OpenAI-compatible, plus native Claude, Gemini, DeepSeek | Claude only (Opus/Sonnet) |
 | **Local-only / air-gapped** | First-class. Zero cloud dependency. | With local models via Ollama etc. | Requires Anthropic account + API |
 | **Account required** | No | No (bring your own key) | Yes (Claude subscription or API key) |
 | **Git integration** | Manual | Automatic commits, smart messages, auto-stage | Automatic commits, branches, PRs |
@@ -147,6 +147,8 @@ See `danu.config.example.json` for all options.
 **vLLM:** `{ "base_url": "http://localhost:8000/v1", "api_key": "token", "model": "Qwen/Qwen2.5-32B" }`
 
 **OpenAI:** `{ "base_url": "https://api.openai.com/v1", "api_key": "sk-...", "model": "gpt-4o" }`
+
+**Anthropic (native):** `{ "base_url": "https://api.anthropic.com", "provider": "anthropic", "api_key": "sk-ant-...", "model": "claude-haiku-4-5-20251001" }`
 
 ## Testing
 
