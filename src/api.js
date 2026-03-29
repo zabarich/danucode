@@ -208,6 +208,7 @@ export async function chatCompletion(messages, tools) {
     tools,
     tool_choice: 'auto',
     ...(chat_template_kwargs && { chat_template_kwargs }),
+    ...(config.extra_body && { ...config.extra_body }),
   };
 
   let res;
@@ -248,6 +249,7 @@ export async function* streamChatCompletion(messages, tools, signal) {
     tool_choice: 'auto',
     stream: true,
     ...(chat_template_kwargs && { chat_template_kwargs }),
+    ...(config.extra_body && { ...config.extra_body }),
   };
 
   const fetchTimeout = timeout || 300000;

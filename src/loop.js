@@ -10,6 +10,11 @@ import { runPreHooks, runPostHooks } from './hooks.js';
 
 const NEEDS_PERMISSION = new Set(['Bash', 'Write', 'Edit']);
 
+// Strip <think>...</think> blocks from model output (some models leak thinking)
+function stripThinking(text) {
+  return text.replace(/<think>[\s\S]*?<\/think>/g, '').replace(/<think>[\s\S]*/g, '');
+}
+
 // Output helpers — route through Ink when available, fallback to console
 function emit(type, content) {
   if (globalThis.__danuOutput) {
@@ -65,17 +70,20 @@ export function createConversation() {
           }
           if (event.type === 'text') {
             textBuffer += event.content;
+            // Strip thinking tags from accumulated buffer
+            const cleaned = stripThinking(textBuffer);
             // In Ink mode, accumulate and emit complete lines
             if (globalThis.__danuOutput) {
-              const lines = textBuffer.split('\n');
+              const lines = cleaned.split('\n');
               // Emit all complete lines, keep the last partial one
               for (let i = 0; i < lines.length - 1; i++) {
-                emit('text', renderInline(lines[i]));
+                if (lines[i].trim()) emit('text', renderInline(lines[i]));
               }
               textBuffer = lines[lines.length - 1];
             } else {
-              // Console mode: write directly for streaming feel
-              process.stdout.write(renderInline(event.content));
+              // Console mode: write cleaned content
+              const out = stripThinking(event.content);
+              if (out) process.stdout.write(renderInline(out));
             }
           } else if (event.type === 'done') {
             // Flush remaining text buffer
