@@ -440,6 +440,7 @@ export function handleHelp() {
   console.log('  /memory clear    Clear all memories');
   console.log('  /model [name]    Show or change current model');
   console.log('  /pr [number]     View PR details or list open PRs');
+  console.log('  /test            Run project tests (npm test)');
   console.log('  /plan            Toggle plan mode on/off');
   console.log('  /yolo            Toggle permissions on/off');
   console.log('  /help            Show this help');
@@ -526,6 +527,18 @@ export async function handleCommand(input, conversation) {
       console.log(chalk.green(`\n  ${result.message}`));
     } else {
       console.log(chalk.yellow(`\n  ${result.error}`));
+    }
+    return true;
+  }
+  if (lower === '/test') {
+    try {
+      const { execSync } = await import('node:child_process');
+      console.log(chalk.dim('\n  Running tests...\n'));
+      const output = execSync('npm test', { encoding: 'utf-8', cwd: process.cwd(), timeout: 60000, stdio: ['pipe', 'pipe', 'pipe'] });
+      console.log(output);
+    } catch (err) {
+      console.log(err.stdout || '');
+      console.log(chalk.red(err.stderr || `Tests failed (exit code ${err.status})`));
     }
     return true;
   }
