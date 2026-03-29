@@ -176,15 +176,17 @@ describe('Tasks tool', async () => {
 
   it('creates, updates, and lists tasks', async () => {
     const r1 = await tasks.execute('TaskCreate', { description: 'Test task' });
-    assert.match(r1, /created/);
+    assert.match(r1, /#\d+/);
 
     const r2 = await tasks.execute('TaskUpdate', { id: 1, status: 'in_progress' });
-    assert.match(r2, /in_progress/);
+    assert.match(r2, /Test task/);
+    assert.match(r2, /►/);
 
     const r3 = await tasks.execute('TaskList', {});
     assert.match(r3, /Test task/);
 
     const r4 = await tasks.execute('TaskUpdate', { id: 1, status: 'completed' });
-    assert.match(r4, /completed/);
+    assert.match(r4, /■/);
+    assert.match(r4, /1\/1 done/);
   });
 });
