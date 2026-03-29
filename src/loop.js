@@ -122,6 +122,7 @@ export function createConversation() {
 
       let assistantMsg;
       let textBuffer = '';
+      let hasStreamedText = false;
       try {
         const currentTools = getToolDefinitions();
         const stream = streamChatCompletion(messages, currentTools, signal);
@@ -135,6 +136,7 @@ export function createConversation() {
           if (event.type === 'text') {
             const processed = processStreamChunk(event.content);
             textBuffer += processed;
+            if (processed) hasStreamedText = true;
             // In Ink mode, accumulate and emit complete lines
             if (globalThis.__danuOutput) {
               const lines = textBuffer.split('\n');
@@ -148,12 +150,14 @@ export function createConversation() {
               if (processed) process.stdout.write(renderInline(processed));
             }
           } else if (event.type === 'done') {
+            // Only process the first done event (safety fallback may emit a second)
+            if (assistantMsg) continue;
             // Flush remaining text buffer
             if (textBuffer) {
               emit('text', renderInline(textBuffer));
               textBuffer = '';
             }
-            if (!globalThis.__danuOutput) {
+            if (!globalThis.__danuOutput && hasStreamedText) {
               process.stdout.write('\n');
             }
             assistantMsg = event.message;
