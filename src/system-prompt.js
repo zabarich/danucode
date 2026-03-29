@@ -3,6 +3,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { loadMemories } from './commands.js';
 import { getModePromptAddition } from './modes.js';
+import { loadIndex, getIndexSummary } from './indexer.js';
 
 function getGitInfo() {
   try {
@@ -237,5 +238,5 @@ ${gitSection}
 Go straight to the point. Try the simplest approach first. Be extra concise.
 - Don't explain what you're about to do — just do it.
 - Don't summarise what you just did unless the result isn't obvious from the tool output.
-- Show what changed, not what you plan to change.${instructionContent ? '\n\n' + instructionContent : ''}${getMemorySection()}${getModePromptAddition()}`;
+- Show what changed, not what you plan to change.${instructionContent ? '\n\n' + instructionContent : ''}${getMemorySection()}${getIndexSummary(loadIndex())}${getModePromptAddition()}`;
 }

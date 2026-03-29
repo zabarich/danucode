@@ -425,6 +425,7 @@ export function handleHelp() {
   console.log(chalk.green('\n  Danu Commands:'));
   console.log(chalk.dim('  ─────────────────────────────────────'));
   console.log('  /init            Create a DANUCODE.md in current directory');
+  console.log('  /index           Build/update codebase index for smarter navigation');
   console.log('  /mode [name]     Switch mode or list modes');
   console.log('  /undo            Undo last file change');
   console.log('  /redo            Redo last undone change');
@@ -456,6 +457,21 @@ export async function handleCommand(input, conversation) {
 
   if (lower === '/init') return handleInit();
   if (lower === '/help') return handleHelp();
+  if (lower === '/index') {
+    const { buildIndex, updateIndex, loadIndex } = await import('./indexer.js');
+    const existing = loadIndex();
+    if (existing) {
+      console.log(chalk.dim('\n  Updating index...'));
+      const { index, updated } = updateIndex();
+      console.log(chalk.green(`  Index updated: ${index.fileCount} files (${updated} changed)`));
+    } else {
+      console.log(chalk.dim('\n  Building index...'));
+      const index = buildIndex();
+      console.log(chalk.green(`  Index built: ${index.fileCount} files`));
+    }
+    console.log(chalk.dim('  Saved to .danu/index.json'));
+    return true;
+  }
   if (lower.startsWith('/model')) {
     const modelName = trimmed.slice('/model'.length).trim();
     if (!modelName) {
