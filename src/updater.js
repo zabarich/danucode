@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 
-const CURRENT_VERSION = '0.2.0';
+const CURRENT_VERSION = '0.3.0';
 
 export function getVersion() {
   return CURRENT_VERSION;
