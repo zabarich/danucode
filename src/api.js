@@ -267,6 +267,7 @@ export async function* streamChatCompletion(messages, tools, signal) {
       tools: anthropicTools.length > 0 ? anthropicTools : undefined,
       max_tokens: 8192,
       stream: true,
+      ...(config.extra_body && { ...config.extra_body }),
     };
 
     const res = await fetch(`${base_url}/v1/messages`, {

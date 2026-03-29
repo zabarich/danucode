@@ -55,15 +55,31 @@ export async function execute(name, args) {
       const task = tasks.find(t => t.id === Number(args.id));
       if (!task) return `Task #${args.id} not found.`;
       task.status = args.status;
-      const icon = args.status === 'completed' ? '+' : args.status === 'in_progress' ? '>' : 'X';
-      return `Task #${task.id} ${icon} ${args.status}: ${task.description}`;
+      let icon;
+      switch(args.status) {
+        case 'completed': icon = '■'; break;
+        case 'in_progress': icon = '►'; break;
+        case 'blocked': icon = '⊘'; break;
+        default: icon = '□'; break;
+      }
+      return `${icon} #${task.id}  ${task.description}  →  ${args.status}`;
     }
     case 'TaskList': {
       if (tasks.length === 0) return 'No tasks.';
-      return tasks.map(t => {
-        const icon = t.status === 'completed' ? '+' : t.status === 'in_progress' ? '>' : t.status === 'blocked' ? 'X' : 'o';
-        return `${icon} #${t.id} [${t.status}] ${t.description}`;
-      }).join('\n');
+      const completed = tasks.filter(t => t.status === 'completed').length;
+      let out = `  Tasks (${completed}/${tasks.length} completed)\n\n`;
+      for (const t of tasks) {
+        let icon, color;
+        switch(t.status) {
+          case 'completed': icon = '■'; color = '\x1b[32m'; break;
+          case 'in_progress': icon = '►'; color = '\x1b[36m'; break;
+          case 'blocked': icon = '⊘'; color = '\x1b[31m'; break;
+          default: icon = '□'; color = '\x1b[2m'; break;
+        }
+        const pad = t.description.length < 40 ? ' '.repeat(40 - t.description.length) : '  ';
+        out += `  ${color}${icon}\x1b[0m #${t.id}  ${t.description}${pad}${t.status}\n`;
+      }
+      return out;
     }
     default:
       return `Unknown task command: ${name}`;

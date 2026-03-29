@@ -10,9 +10,42 @@ import { runPreHooks, runPostHooks } from './hooks.js';
 
 const NEEDS_PERMISSION = new Set(['Bash', 'Write', 'Edit']);
 
-// Strip <think>...</think> blocks from model output (some models leak thinking)
+// State for tracking thinking blocks during streaming
+let inThinkBlock = false;
+
 function stripThinking(text) {
-  return text.replace(/<think>[\s\S]*?<\/think>/g, '').replace(/<think>[\s\S]*/g, '');
+  // Handle complete think blocks
+  text = text.replace(/<think>[\s\S]*?<\/think>\s*/g, '');
+  return text;
+}
+
+function processStreamChunk(chunk) {
+  let result = '';
+  let i = 0;
+  while (i < chunk.length) {
+    if (!inThinkBlock) {
+      // Check if we're entering a think block
+      const thinkStart = chunk.indexOf('<think>', i);
+      if (thinkStart === -1) {
+        result += chunk.slice(i);
+        break;
+      } else {
+        result += chunk.slice(i, thinkStart);
+        inThinkBlock = true;
+        i = thinkStart + 7; // skip past <think>
+      }
+    } else {
+      // We're inside a think block, look for end
+      const thinkEnd = chunk.indexOf('</think>', i);
+      if (thinkEnd === -1) {
+        break; // Still in think block, discard rest
+      } else {
+        inThinkBlock = false;
+        i = thinkEnd + 8; // skip past </think>
+      }
+    }
+  }
+  return result;
 }
 
 // Output helpers — route through Ink when available, fallback to console
@@ -40,6 +73,7 @@ export function createConversation() {
   ];
 
   async function send(userMessage, rl, signal) {
+    inThinkBlock = false;
     messages.push({ role: 'user', content: userMessage });
 
     while (true) {
@@ -69,21 +103,19 @@ export function createConversation() {
             return;
           }
           if (event.type === 'text') {
-            textBuffer += event.content;
-            // Strip thinking tags from accumulated buffer
-            const cleaned = stripThinking(textBuffer);
+            const processed = processStreamChunk(event.content);
+            textBuffer += processed;
             // In Ink mode, accumulate and emit complete lines
             if (globalThis.__danuOutput) {
-              const lines = cleaned.split('\n');
+              const lines = textBuffer.split('\n');
               // Emit all complete lines, keep the last partial one
               for (let i = 0; i < lines.length - 1; i++) {
                 if (lines[i].trim()) emit('text', renderInline(lines[i]));
               }
               textBuffer = lines[lines.length - 1];
             } else {
-              // Console mode: write cleaned content
-              const out = stripThinking(event.content);
-              if (out) process.stdout.write(renderInline(out));
+              // Console mode: write processed content
+              if (processed) process.stdout.write(renderInline(processed));
             }
           } else if (event.type === 'done') {
             // Flush remaining text buffer

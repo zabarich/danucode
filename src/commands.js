@@ -429,6 +429,8 @@ export function handleHelp() {
   console.log('  /undo            Undo last file change');
   console.log('  /redo            Redo last undone change');
   console.log('  /compact         Compact conversation history');
+  console.log('  /clear           Clear conversation and start fresh');
+  console.log('  /context         Show token usage and context window');
   console.log('  /save [name]     Save current session (default: timestamp)');
   console.log('  /resume [name]   Load a session or list all sessions');
   console.log('  /history [search] Browse past sessions');
@@ -528,6 +530,54 @@ export async function handleCommand(input, conversation) {
     return true;
   }
   if (lower === '/compact') return await handleCompact();
+  if (lower === '/clear') {
+    if (!conversationRef) {
+      console.log(chalk.yellow('\n  No active conversation.'));
+      return true;
+    }
+    const { buildSystemPrompt } = await import('./system-prompt.js');
+    conversationRef.loadMessages([{ role: 'system', content: buildSystemPrompt() }]);
+    console.log(chalk.green('\n  Conversation cleared.'));
+    return true;
+  }
+  if (lower === '/context') {
+    if (!conversationRef) {
+      console.log(chalk.yellow('\n  No active conversation.'));
+      return true;
+    }
+    const { estimateTokens } = await import('./context.js');
+    const messages = conversationRef.getMessages();
+    const total = estimateTokens(messages);
+
+    let systemTokens = 0, userTokens = 0, assistantTokens = 0, toolTokens = 0;
+    for (const m of messages) {
+      const len = (typeof m.content === 'string' ? m.content.length : 0) + (m.tool_calls ? JSON.stringify(m.tool_calls).length : 0);
+      const tokens = Math.ceil(len / 4);
+      if (m.role === 'system') systemTokens += tokens;
+      else if (m.role === 'user') userTokens += tokens;
+      else if (m.role === 'assistant') assistantTokens += tokens;
+      else if (m.role === 'tool') toolTokens += tokens;
+    }
+
+    console.log(chalk.green('\n  Context Usage'));
+    console.log(chalk.dim(`  Total: ~${(total/1000).toFixed(1)}k tokens · ${messages.length} messages`));
+    console.log(chalk.dim(`  System:    ~${(systemTokens/1000).toFixed(1)}k`));
+    console.log(chalk.dim(`  User:      ~${(userTokens/1000).toFixed(1)}k`));
+    console.log(chalk.dim(`  Assistant: ~${(assistantTokens/1000).toFixed(1)}k`));
+    console.log(chalk.dim(`  Tool:      ~${(toolTokens/1000).toFixed(1)}k`));
+
+    const { getConfig } = await import('./api.js');
+    const config = getConfig();
+    const maxTokens = config?.max_context_tokens || 120000;
+    const pct = Math.round((total / maxTokens) * 100);
+    const barLen = 30;
+    const filled = Math.round(barLen * pct / 100);
+    const bar = '█'.repeat(filled) + '░'.repeat(barLen - filled);
+    const color = pct > 80 ? chalk.red : pct > 50 ? chalk.yellow : chalk.green;
+    console.log(`  ${color(bar)} ${pct}% of ${(maxTokens/1000).toFixed(0)}k`);
+    console.log('');
+    return true;
+  }
   if (lower === '/memory list' || lower === '/memories') return handleMemoryList();
   if (lower === '/memory clear') return handleMemoryClear();
 
