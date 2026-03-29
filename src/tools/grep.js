@@ -21,7 +21,7 @@ export const definition = {
   type: 'function',
   function: {
     name: 'Grep',
-    description: 'Searches file contents for a regex pattern. Returns matching file paths by default, or matching lines with output_mode "content".',
+    description: 'Searches file contents for a regex pattern. Built on ripgrep when available, with JS fallback.\n\nUsage:\n- ALWAYS use this tool for content search. NEVER invoke grep or rg via Bash.\n- Supports full regex syntax (e.g., "log.*Error", "function\\\\s+\\\\w+").\n- Filter files with the include glob parameter (e.g., "*.js").\n- Output modes: "files_with_matches" returns file paths (default), "content" returns matching lines with line numbers.\n- Case insensitive: set case_insensitive to true.\n- For open-ended searches requiring multiple rounds, use the Agent tool instead.',
     parameters: {
       type: 'object',
       properties: {

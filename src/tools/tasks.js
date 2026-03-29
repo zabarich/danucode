@@ -6,7 +6,7 @@ export const definitions = [
     type: 'function',
     function: {
       name: 'TaskCreate',
-      description: 'Create a task to track progress on a piece of work.',
+      description: 'Create a task to track progress. Use for multi-step tasks with 3+ distinct steps. Skip task creation for single-step tasks, trivial fixes, or conversational requests.',
       parameters: {
         type: 'object',
         properties: {
@@ -20,7 +20,7 @@ export const definitions = [
     type: 'function',
     function: {
       name: 'TaskUpdate',
-      description: 'Update a task status.',
+      description: 'Update a task status. Mark "in_progress" when starting, "completed" immediately when done (don\'t batch), "blocked" if stuck.',
       parameters: {
         type: 'object',
         properties: {
@@ -35,7 +35,7 @@ export const definitions = [
     type: 'function',
     function: {
       name: 'TaskList',
-      description: 'List all current tasks and their status.',
+      description: 'List all current tasks and their status. Use to check progress and decide what to work on next.',
       parameters: {
         type: 'object',
         properties: {},

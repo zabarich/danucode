@@ -4,7 +4,7 @@ export const definition = {
   type: 'function',
   function: {
     name: 'NotebookEdit',
-    description: 'Edit a Jupyter notebook (.ipynb). Can replace, insert, or delete cells.',
+    description: 'Edit a Jupyter notebook (.ipynb file). Can replace, insert, or delete cells.\n\nUsage:\n- "replace": overwrite a cell content and type.\n- "insert": add a new cell at a given index.\n- "delete": remove a cell at a given index.\n- Cell types: "code" for executable, "markdown" for text.\n- Cell indices are 0-based.\n- Use Read to view notebook contents before editing.',
     parameters: {
       type: 'object',
       properties: {

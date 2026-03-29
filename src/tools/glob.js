@@ -6,7 +6,7 @@ export const definition = {
   type: 'function',
   function: {
     name: 'Glob',
-    description: 'Finds files matching a glob pattern. Returns file paths sorted by modification time.',
+    description: 'Fast file pattern matching tool that works with any codebase size.\n\n- Supports glob patterns like "**/*.js" or "src/**/*.ts"\n- Returns matching file paths sorted by modification time (most recent first)\n- Use this when you need to find files by name or extension\n- When doing an open-ended search requiring multiple rounds, use the Agent tool instead\n- Speculatively perform multiple searches in parallel when useful',
     parameters: {
       type: 'object',
       properties: {

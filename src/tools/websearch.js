@@ -4,7 +4,7 @@ export const definition = {
   type: 'function',
   function: {
     name: 'WebSearch',
-    description: 'Searches the web and returns results with titles, URLs, and snippets. Use for looking up documentation, error messages, APIs, libraries, etc.',
+    description: 'Searches the web and returns results with titles, URLs, and snippets.\n\nUsage:\n- Use for documentation, error messages, APIs, libraries, and current information beyond the model knowledge cutoff.\n- Returns up to max_results results (default 5, max 10).\n- Use WebFetch to read the full content of any promising result URL.',
     parameters: {
       type: 'object',
       properties: {

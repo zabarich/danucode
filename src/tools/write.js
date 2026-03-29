@@ -7,7 +7,7 @@ export const definition = {
   type: 'function',
   function: {
     name: 'Write',
-    description: 'Writes content to a file. Creates parent directories if needed. Use absolute paths.',
+    description: 'Writes content to a file, creating parent directories if needed. Use absolute paths.\n\nUsage:\n- This tool overwrites existing files. If the file already exists, you MUST use Read first.\n- Prefer the Edit tool for modifying existing files — it only sends the diff.\n- Only use Write for new files or complete rewrites.\n- NEVER proactively create documentation files (*.md) or README files unless the user explicitly asks.\n- Only use emojis in file content if the user explicitly requests it.',
     parameters: {
       type: 'object',
       properties: {

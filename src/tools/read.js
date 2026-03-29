@@ -5,7 +5,7 @@ export const definition = {
   type: 'function',
   function: {
     name: 'Read',
-    description: 'Reads a file and returns its contents with line numbers. Use absolute paths.',
+    description: 'Reads a file from the local filesystem and returns its contents with line numbers.\n\nUsage:\n- The file_path must be an absolute path.\n- By default reads up to 2000 lines from line 1. Use offset and limit for large files.\n- Results use cat -n format (line numbers starting at 1).\n- This tool reads files only, not directories. Use ls via Bash for directories.\n- Speculatively read multiple files in parallel when useful — it is better to read too many files than too few.\n- If a file exists but is empty, you will receive a warning.',
     parameters: {
       type: 'object',
       properties: {

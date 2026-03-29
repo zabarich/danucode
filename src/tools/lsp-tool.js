@@ -4,7 +4,7 @@ export const definition = {
   type: 'function',
   function: {
     name: 'LSP',
-    description: 'Query the Language Server for code intelligence. Get definitions, references, or type info for a symbol at a specific position in a file.',
+    description: 'Query the Language Server for code intelligence. Get definitions, references, or type info for a symbol at a specific position.\n\nUsage:\n- Requires a language server for the project language. If none detected, the tool will tell you.\n- "definition": jump to where a symbol is defined.\n- "references": find all usages of a symbol.\n- "hover": get type information and documentation.\n- Positions use 1-based line numbers and 0-based character offsets.',
     parameters: {
       type: 'object',
       properties: {

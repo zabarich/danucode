@@ -2,7 +2,7 @@ export const definition = {
   type: 'function',
   function: {
     name: 'WebFetch',
-    description: 'Fetches a URL and returns the content as readable text. HTML is stripped to plain text. Use for reading documentation, GitHub pages, blog posts, etc.',
+    description: 'Fetches a URL and returns the content as readable text. HTML is converted to plain text.\n\nUsage:\n- The URL must be fully formed (e.g., https://example.com/page).\n- HTTP URLs are automatically upgraded to HTTPS.\n- Use for docs pages, GitHub READMEs, blog posts, API references.\n- For GitHub repository data, prefer using gh CLI via Bash instead.',
     parameters: {
       type: 'object',
       properties: {

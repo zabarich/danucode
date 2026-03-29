@@ -4,7 +4,7 @@ export const definition = {
   type: 'function',
   function: {
     name: 'GitHub',
-    description: 'Interact with GitHub: view PRs, issues, diffs, create PRs. Requires gh CLI to be installed and authenticated.',
+    description: 'Interact with GitHub: view PRs, issues, diffs, and create PRs.\n\nUsage:\n- Requires the gh CLI to be installed and authenticated.\n- For operations not covered by the available actions, use gh commands directly via Bash.\n- Only available when working in a git repository.',
     parameters: {
       type: 'object',
       properties: {

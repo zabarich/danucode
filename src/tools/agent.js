@@ -6,7 +6,7 @@ export const definition = {
   type: 'function',
   function: {
     name: 'Agent',
-    description: 'Launch a sub-agent to handle a complex task autonomously. The agent gets its own conversation and can use all tools. Returns the final text response.',
+    description: 'Launch a sub-agent to handle a complex task autonomously. The agent gets its own conversation with access to all tools and returns its final text response.\n\nUsage:\n- Always include a short description (3-5 words) summarizing what the agent will do.\n- Launch multiple agents concurrently when possible to maximize performance.\n- The result is returned to you, not shown to the user. Include a concise summary in your response.\n- Provide clear, detailed prompts. State whether you expect code changes or just research.\n- Set isolation: "worktree" to run in a temporary git worktree for independent changes.\n- Prefer agents over many search commands for broad codebase exploration.',
     parameters: {
       type: 'object',
       properties: {

@@ -7,7 +7,7 @@ export const definition = {
   type: 'function',
   function: {
     name: 'Edit',
-    description: 'Edits a file by replacing old_string with new_string. The old_string must match exactly including whitespace. Use absolute paths.',
+    description: 'Performs exact string replacement in a file. The old_string must match exactly including whitespace and indentation.\n\nUsage:\n- You must use Read at least once before editing a file. Understand the contents first.\n- When copying text from Read output, preserve exact indentation after the line number prefix. Never include line numbers in old_string or new_string.\n- The edit FAILS if old_string appears more than once. Provide more surrounding context to make it unique.\n- Only change what needs changing. Don\'t reformat surrounding code.\n- ALWAYS prefer editing existing files over creating new ones.\n- Only use emojis if the user explicitly requests it.',
     parameters: {
       type: 'object',
       properties: {

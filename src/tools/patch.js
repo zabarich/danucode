@@ -6,7 +6,7 @@ export const definition = {
   type: 'function',
   function: {
     name: 'Patch',
-    description: 'Apply a unified diff patch to a file. The patch should be in standard unified diff format with @@ line markers, - for removals and + for additions.',
+    description: 'Applies a unified diff patch to a file. Use standard unified diff format.\n\nUsage:\n- The patch must have @@ line markers (e.g., @@ -10,5 +10,7 @@).\n- Lines starting with - are removed, + are added, space are context.\n- Use Patch instead of Edit when making multiple scattered changes to the same file.\n- Use Edit instead of Patch for simple single-location replacements.\n- The file must already exist. Use absolute paths.',
     parameters: {
       type: 'object',
       properties: {
