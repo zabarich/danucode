@@ -2,6 +2,7 @@ import { writeFile, mkdir, readFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { isIgnored } from '../ignore.js';
 import { trackChange } from '../filetracker.js';
+import { addLinesChanged } from '../cost-tracker.js';
 
 export const definition = {
   type: 'function',
@@ -40,6 +41,10 @@ export async function execute({ file_path, content, _bypassIgnore }) {
   const newLineCount = content.split('\n').length;
 
   trackChange(file_path, oldContent, content);
+
+  const added = Math.max(0, newLineCount - oldLineCount);
+  const removed = Math.max(0, oldLineCount - newLineCount);
+  addLinesChanged(added, removed);
 
   if (fileExisted) {
     return `Overwrote ${file_path} (was ${oldLineCount} lines, now ${newLineCount} lines)`;

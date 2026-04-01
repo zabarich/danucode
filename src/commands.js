@@ -3,7 +3,8 @@ import { writeFileSync, mkdirSync, readFileSync, readdirSync, existsSync, statSy
 import { resolve, join, extname } from 'node:path';
 import { homedir } from 'node:os';
 import { execSync } from 'node:child_process';
-import { forceCompact, estimateTokens } from './context.js';
+import { forceCompact, estimateTokens, resetContextWarnings } from './context.js';
+import { formatCostSummary, resetCostState, getTotalTokens } from './cost-tracker.js';
 import { setSkipPermissions, getSkipPermissions } from './permissions.js';
 import { enterPlanMode, isPlanMode } from './planmode.js';
 import { setMode, listModes, getCurrentMode } from './modes.js';
@@ -433,6 +434,8 @@ export function handleHelp() {
   console.log('  /compact         Compact conversation history');
   console.log('  /clear           Clear conversation and start fresh');
   console.log('  /context         Show token usage and context window');
+  console.log('  /cost            Show session token costs and stats');
+  console.log('  /agents          List spawned agents (for SendMessage)');
   console.log('  /files           List files accessed in this session');
   console.log('  /save [name]     Save current session (default: timestamp)');
   console.log('  /resume [name]   Load a session or list all sessions');
@@ -560,7 +563,31 @@ export async function handleCommand(input, conversation) {
     }
     return true;
   }
+  if (lower === '/agents') {
+    const { listAgents } = await import('./agent-registry.js');
+    const agents = listAgents();
+    if (agents.length === 0) {
+      console.log(chalk.dim('\n  No agents spawned in this session.'));
+      return true;
+    }
+    console.log(chalk.green(`\n  Agents (${agents.length}):`));
+    console.log(chalk.dim('  ─────────────────────────────────────'));
+    for (const a of agents) {
+      const age = Math.round((Date.now() - a.createdAt) / 1000);
+      console.log(`  ${chalk.white(a.id)}  ${chalk.dim(a.description)}`);
+      console.log(chalk.dim(`    ${a.messageCount} messages · ${age}s ago`));
+    }
+    console.log(chalk.dim('\n  Use SendMessage tool to continue an agent.'));
+    return true;
+  }
   if (lower === '/compact') return await handleCompact();
+  if (lower === '/cost') {
+    console.log(chalk.green('\n  Session Stats'));
+    console.log(chalk.dim('  ─────────────────────────────────────'));
+    console.log(chalk.dim(formatCostSummary()));
+    console.log('');
+    return true;
+  }
   if (lower === '/clear') {
     if (!conversationRef) {
       console.log(chalk.yellow('\n  No active conversation.'));
@@ -568,6 +595,8 @@ export async function handleCommand(input, conversation) {
     }
     const { buildSystemPrompt } = await import('./system-prompt.js');
     conversationRef.loadMessages([{ role: 'system', content: buildSystemPrompt() }]);
+    resetCostState();
+    resetContextWarnings();
     console.log(chalk.green('\n  Conversation cleared.'));
     return true;
   }
@@ -590,8 +619,9 @@ export async function handleCommand(input, conversation) {
       else if (m.role === 'tool') toolTokens += tokens;
     }
 
+    const apiTotal = getTotalTokens();
     console.log(chalk.green('\n  Context Usage'));
-    console.log(chalk.dim(`  Total: ~${(total/1000).toFixed(1)}k tokens · ${messages.length} messages`));
+    console.log(chalk.dim(`  Total: ~${(total/1000).toFixed(1)}k tokens (est) · ${messages.length} messages` + (apiTotal ? ` · ${apiTotal.toLocaleString()} API tokens used` : '')));
     console.log(chalk.dim(`  System:    ~${(systemTokens/1000).toFixed(1)}k`));
     console.log(chalk.dim(`  User:      ~${(userTokens/1000).toFixed(1)}k`));
     console.log(chalk.dim(`  Assistant: ~${(assistantTokens/1000).toFixed(1)}k`));

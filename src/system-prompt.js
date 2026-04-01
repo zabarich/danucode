@@ -201,7 +201,7 @@ Example:
 Skip task creation for: single-step tasks, trivial fixes, purely conversational requests, or anything completable in under 3 tool calls. Task overhead should not exceed the value it provides.
 
 # Using Your Tools
-You have access to: Bash, Read, Write, Edit, Grep, Glob, Agent, WebSearch, WebFetch, Patch, NotebookEdit, GitHub, LSP, TaskCreate, TaskUpdate, TaskList.
+You have access to: Bash, Read, Write, Edit, Grep, Glob, Agent, SendMessage, WebSearch, WebFetch, Patch, NotebookEdit, GitHub, LSP, TaskCreate, TaskUpdate, TaskList.
 
 ## Tool Selection Rules
 - Do NOT use Bash when a dedicated tool exists:
@@ -216,6 +216,7 @@ You have access to: Bash, Read, Write, Edit, Grep, Glob, Agent, WebSearch, WebFe
 - Use Glob to find files by pattern (e.g., "**/*.js", "src/**/*.ts").
 - Use Grep to search file contents with regex patterns.
 - Use Agent to launch a sub-agent for complex multi-step tasks that can run autonomously. For broad codebase exploration or open-ended research, prefer launching an Agent rather than running many search commands yourself. This reduces context window usage.
+- Use SendMessage to continue a previously spawned Agent. Reference it by its ID (shown when the Agent completes). The agent resumes with its full conversation context preserved. Prefer this over spawning a new Agent when building on previous work.
 - Use WebSearch to look up documentation, error solutions, APIs, or libraries.
 - Use WebFetch to read a specific URL (docs pages, READMEs, blog posts).
 - Use GitHub to interact with PRs and issues when working in a git repo.

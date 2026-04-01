@@ -19,6 +19,7 @@ import { initMcpServers, shutdownMcpServers } from '../src/mcp.js';
 import { loadCustomTools } from '../src/custom-tools.js';
 import { checkForUpdates, showUpdateNotice, getVersion } from '../src/updater.js';
 import { initLsp, shutdownLsp } from '../src/lsp.js';
+import { addToHistory, getHistory } from '../src/history.js';
 
 const e = React.createElement;
 
@@ -123,6 +124,8 @@ function DanuApp({ config, yolo, projectName, conversation, abort, sessionName }
   const [permPrompt, setPermPrompt] = useState(null);
   const busyStart = useRef(0);
   const lineId = useRef(0);
+  const historyIndex = useRef(-1);
+  const historyDraft = useRef('');
 
   const FRAMES = '⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'.split('');
   const PHRASES = [
@@ -168,7 +171,7 @@ function DanuApp({ config, yolo, projectName, conversation, abort, sessionName }
     return () => setPermissionHandler(null);
   }, []);
 
-  // Handle escape
+  // Handle escape and arrow keys
   useInput((ch, key) => {
     if (key.escape) {
       if (busy && abort.current) {
@@ -177,6 +180,28 @@ function DanuApp({ config, yolo, projectName, conversation, abort, sessionName }
       } else if (!busy && !permPrompt) {
         shutdown();
         exit();
+      }
+    }
+    // Up/down arrow: history navigation
+    if (!busy && !permPrompt) {
+      if (key.upArrow) {
+        const history = getHistory(process.cwd());
+        if (history.length === 0) return;
+        if (historyIndex.current === -1) {
+          historyDraft.current = input;
+        }
+        const next = Math.min(historyIndex.current + 1, history.length - 1);
+        historyIndex.current = next;
+        setInput(history[next]);
+      } else if (key.downArrow) {
+        if (historyIndex.current <= 0) {
+          historyIndex.current = -1;
+          setInput(historyDraft.current);
+        } else {
+          historyIndex.current--;
+          const history = getHistory(process.cwd());
+          setInput(history[historyIndex.current]);
+        }
       }
     }
     // Handle permission prompt y/n/a
@@ -200,6 +225,9 @@ function DanuApp({ config, yolo, projectName, conversation, abort, sessionName }
     if (!trimmed || busy) return;
 
     setInput('');
+    historyIndex.current = -1;
+    historyDraft.current = '';
+    addToHistory(trimmed, process.cwd(), sessionName || '');
     addLine('user', trimmed);
 
     const parts = trimmed.split(';').map(s => s.trim()).filter(s => s.length > 0);
@@ -359,6 +387,7 @@ async function main() {
 
   // One-shot mode: run command and exit
   if (opts.command) {
+    addToHistory(opts.command.trim(), process.cwd(), opts.session || '');
     const parts = opts.command.split(';').map(s => s.trim()).filter(s => s.length > 0);
     for (const part of parts) {
       if (await handleCommand(part, conversation)) continue;
@@ -406,6 +435,7 @@ async function main() {
       try { userInput = await rl.question(chalk.green('❯ ')); } catch { break; }
       if (!userInput.trim()) continue;
       const parts = userInput.split(';').map(s => s.trim()).filter(s => s.length > 0);
+      addToHistory(userInput.trim(), process.cwd(), opts.session || '');
       for (const part of parts) {
         if (await handleCommand(part, conversation)) continue;
         const cmd = part.toLowerCase();

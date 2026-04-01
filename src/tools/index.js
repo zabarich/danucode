@@ -12,6 +12,7 @@ import * as notebook from './notebook.js';
 import * as patch from './patch.js';
 import * as lspTool from './lsp-tool.js';
 import * as githubTool from './github-tool.js';
+import * as sendMessage from './send-message.js';
 import { resolve } from 'node:path';
 import { isPlanMode, isToolAllowedInPlanMode, exitPlanMode, exitPlanModeDefinition, getPlanFilePath } from '../planmode.js';
 import { getMcpToolDefinitions, executeMcpTool, isMcpTool } from '../mcp.js';
@@ -32,6 +33,7 @@ const tools = {
   Patch: patch,
   LSP: lspTool,
   GitHub: githubTool,
+  SendMessage: sendMessage,
 };
 
 const taskToolNames = new Set(['TaskCreate', 'TaskUpdate', 'TaskList']);

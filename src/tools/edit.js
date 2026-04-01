@@ -2,6 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import chalk from 'chalk';
 import { isIgnored } from '../ignore.js';
 import { trackChange } from '../filetracker.js';
+import { addLinesChanged } from '../cost-tracker.js';
 
 export const definition = {
   type: 'function',
@@ -58,6 +59,7 @@ export async function execute({ file_path, old_string, new_string, start_line, e
     if (newLines.length > 10) diffOutput += chalk.dim(`  ... ${newLines.length - 10} more added\n`);
     diffOutput += chalk.dim('─'.repeat(60)) + '\n';
 
+    addLinesChanged(newLines.length, removedLines.length);
     await writeFile(file_path, newContent, 'utf-8');
     return diffOutput + `Edited ${file_path}: replaced lines ${s}-${e} (${removedLines.length} → ${newLines.length} lines).`;
   }
@@ -92,6 +94,7 @@ export async function execute({ file_path, old_string, new_string, start_line, e
 
   const oldStringLines = old_string.split('\n');
   const newStringLines = new_string.split('\n');
+  addLinesChanged(newStringLines.length, oldStringLines.length);
   const contextBefore = Math.max(0, startLine - 2);
   const contextAfter = Math.min(lines.length - 1, startLine + oldStringLines.length + 1);
 

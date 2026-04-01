@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { homedir } from 'node:os';
+import { addTokenUsage } from './cost-tracker.js';
 
 let config = null;
 let loadedConfigPath = null;
@@ -176,6 +177,8 @@ export async function chatCompletion(messages, tools) {
 
   const fetchTimeout = timeout || 300000;
 
+  const startTime = Date.now();
+
   if (isAnthropicProvider()) {
     const { system, messages: msgs, tools: anthropicTools } = convertToAnthropicRequest(messages, tools);
     const body = {
@@ -199,6 +202,10 @@ export async function chatCompletion(messages, tools) {
 
     if (!res.ok) { const text = await res.text(); throw new Error(`Anthropic API error ${res.status}: ${text}`); }
     const data = await res.json();
+    const elapsed = Date.now() - startTime;
+    if (data.usage) {
+      addTokenUsage(model, data.usage.input_tokens || 0, data.usage.output_tokens || 0, elapsed);
+    }
     return convertFromAnthropicResponse(data);
   }
 
@@ -235,12 +242,18 @@ export async function chatCompletion(messages, tools) {
   }
 
   const data = await res.json();
+  const elapsed = Date.now() - startTime;
+  const usage = data.usage || data.choices?.[0]?.usage;
+  if (usage) {
+    addTokenUsage(model, usage.prompt_tokens || 0, usage.completion_tokens || 0, elapsed);
+  }
   return data.choices[0];
 }
 
 export async function* streamChatCompletion(messages, tools, signal) {
   if (!config) throw new Error('Config not loaded. Call loadConfig() first.');
   const { base_url, api_key, model, chat_template_kwargs, timeout } = config;
+  const streamStartTime = Date.now();
 
   const body = {
     model,
@@ -248,6 +261,7 @@ export async function* streamChatCompletion(messages, tools, signal) {
     tools,
     tool_choice: 'auto',
     stream: true,
+    stream_options: { include_usage: true },
     ...(chat_template_kwargs && { chat_template_kwargs }),
     ...(config.extra_body && { ...config.extra_body }),
   };
@@ -328,6 +342,10 @@ export async function* streamChatCompletion(messages, tools, signal) {
                 const tc = toolCalls[toolCalls.length - 1];
                 if (tc) tc.function.arguments += data.delta.partial_json;
               }
+            } else if (data.type === 'message_delta' && data.usage) {
+              // Anthropic streams usage in message_delta before message_stop
+              const elapsed = Date.now() - streamStartTime;
+              addTokenUsage(model, data.usage.input_tokens || 0, data.usage.output_tokens || 0, elapsed);
             } else if (data.type === 'message_stop') {
               yield {
                 type: 'done',
@@ -376,6 +394,7 @@ export async function* streamChatCompletion(messages, tools, signal) {
   const toolCallsByIndex = {};
   let contentBuffer = '';
   let doneEmitted = false;
+  let streamUsage = null;
 
   try {
     while (true) {
@@ -395,6 +414,10 @@ export async function* streamChatCompletion(messages, tools, signal) {
 
         if (line === 'data: [DONE]') {
           doneEmitted = true;
+          const elapsed = Date.now() - streamStartTime;
+          if (streamUsage) {
+            addTokenUsage(model, streamUsage.prompt_tokens || 0, streamUsage.completion_tokens || 0, elapsed);
+          }
           const toolCalls = Object.keys(toolCallsByIndex)
             .sort((a, b) => parseInt(a) - parseInt(b))
             .map(idx => toolCallsByIndex[idx]);
@@ -414,6 +437,12 @@ export async function* streamChatCompletion(messages, tools, signal) {
           const jsonStr = line.slice(6);
           try {
             const data = JSON.parse(jsonStr);
+
+            // Capture usage from final chunk (stream_options.include_usage)
+            if (data.usage) {
+              streamUsage = data.usage;
+            }
+
             const choice = data.choices?.[0];
 
             if (!choice) continue;
@@ -470,6 +499,10 @@ export async function* streamChatCompletion(messages, tools, signal) {
         const trimmed = line.trim();
         if (trimmed === 'data: [DONE]') {
           emittedDone = true;
+          const elapsed = Date.now() - streamStartTime;
+          if (streamUsage) {
+            addTokenUsage(model, streamUsage.prompt_tokens || 0, streamUsage.completion_tokens || 0, elapsed);
+          }
           const toolCalls = Object.keys(toolCallsByIndex)
             .sort((a, b) => parseInt(a) - parseInt(b))
             .map(idx => toolCallsByIndex[idx]);
@@ -488,6 +521,10 @@ export async function* streamChatCompletion(messages, tools, signal) {
 
     // Safety: if stream ended without [DONE], emit done with whatever we have
     if (!doneEmitted && !emittedDone) {
+      const elapsed = Date.now() - streamStartTime;
+      if (streamUsage) {
+        addTokenUsage(model, streamUsage.prompt_tokens || 0, streamUsage.completion_tokens || 0, elapsed);
+      }
       const toolCalls = Object.keys(toolCallsByIndex)
         .sort((a, b) => parseInt(a) - parseInt(b))
         .map(idx => toolCallsByIndex[idx]);

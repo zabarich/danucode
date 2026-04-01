@@ -3,7 +3,7 @@ import { chatCompletion, streamChatCompletion } from './api.js';
 import { buildSystemPrompt } from './system-prompt.js';
 import { getToolDefinitions, executeTool } from './tools/index.js';
 import { askPermission } from './permissions.js';
-import { compactIfNeeded } from './context.js';
+import { compactIfNeeded, isContextLengthError, compactOnError, checkContextWarning } from './context.js';
 import { renderInline } from './markdown.js';
 import { isPlanMode, getPlanModePrompt } from './planmode.js';
 import { runPreHooks, runPostHooks } from './hooks.js';
@@ -105,6 +105,7 @@ export function createConversation() {
   async function send(userMessage, rl, signal) {
     inThinkBlock = false;
     messages.push({ role: 'user', content: userMessage });
+    let contextRetries = 0;
 
     while (true) {
       const compacted = await compactIfNeeded(messages);
@@ -169,6 +170,14 @@ export function createConversation() {
           messages.pop();
           return;
         }
+        // Reactive compaction: retry on context-length errors
+        if (isContextLengthError(err) && contextRetries < 2) {
+          contextRetries++;
+          const compacted = await compactOnError(messages);
+          messages.length = 0;
+          messages.push(...compacted);
+          continue; // Retry the API call
+        }
         emit('error', `Error: ${err.message}`);
         messages.pop();
         return;
@@ -177,6 +186,7 @@ export function createConversation() {
       if (!assistantMsg) return;
 
       messages.push(assistantMsg);
+      checkContextWarning(messages);
 
       if (!assistantMsg.tool_calls || assistantMsg.tool_calls.length === 0) {
         break;
@@ -280,6 +290,7 @@ function getToolDetail(name, args) {
     case 'Grep': return args.pattern;
     case 'Glob': return args.pattern;
     case 'Agent': return args.description || args.prompt?.slice(0, 60);
+    case 'SendMessage': return `-> ${args.to}`;
     case 'WebSearch': return args.query;
     case 'WebFetch': return args.url;
     default: return '';

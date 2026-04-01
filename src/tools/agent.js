@@ -1,6 +1,8 @@
 import chalk from 'chalk';
 import { chatCompletion, getConfig } from '../api.js';
 import { buildSystemPrompt } from '../system-prompt.js';
+import { isContextLengthError, compactOnError } from '../context.js';
+import { registerAgent, generateAgentId } from '../agent-registry.js';
 
 export const definition = {
   type: 'function',
@@ -58,6 +60,12 @@ export async function execute({ prompt, description, isolation }) {
       try {
         choice = await chatCompletion(messages, toolDefinitions);
       } catch (err) {
+        if (isContextLengthError(err)) {
+          const compacted = await compactOnError(messages);
+          messages.length = 0;
+          messages.push(...compacted);
+          continue;
+        }
         return `Agent error: ${err.message}`;
       }
 
@@ -121,5 +129,9 @@ export async function execute({ prompt, description, isolation }) {
     }
   }
 
-  return lastResponse;
+  // Register agent so it can be continued via SendMessage
+  const agentId = generateAgentId(descriptionText);
+  registerAgent(agentId, descriptionText, messages);
+
+  return `[Agent ${agentId}] ${lastResponse}`;
 }
