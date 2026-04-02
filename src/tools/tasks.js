@@ -81,11 +81,3 @@ export async function execute(name, args) {
       return `Unknown task command: ${name}`;
   }
 }
-
-export function getTasks() {
-  return {
-    tasks: tasks.map(t => ({ ...t })),
-    completed: tasks.filter(t => t.status === 'completed').length,
-    total: tasks.length,
-  };
-}
