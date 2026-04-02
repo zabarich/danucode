@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Danucode Console</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#9670;</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- TAB BAR -->
+<div class="tab-bar" id="tab-bar">
+  <div id="tabs-container"></div>
+  <button class="tab-new" title="New workspace" id="btn-new-tab">+</button>
+  <div class="spacer"></div>
+  <button class="settings-btn" title="Settings" id="btn-settings">&#9881;</button>
+</div>
+
+<div class="main">
+
+  <!-- LEFT SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-header">
+        <span>Files</span>
+        <span class="path-hint" id="sidebar-cwd"></span>
+      </div>
+      <div class="file-tree" id="file-tree">
+        <div class="file-tree-empty">Agent will populate files as they are accessed</div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-header">
+        <span>Tasks</span>
+        <span id="task-count">0/0</span>
+      </div>
+      <div class="task-panel" id="task-panel">
+        <div class="task-empty">No tasks yet</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="content">
+    <!-- Active Path Indicator -->
+    <div class="active-path" id="active-path">
+      <span class="idle-text">Idle</span>
+    </div>
+
+    <!-- Event Filter -->
+    <div class="event-filter" id="event-filter">
+      <button class="filter-btn active" data-filter="all">all</button>
+      <button class="filter-btn" data-filter="read">reads</button>
+      <button class="filter-btn" data-filter="search">searches</button>
+      <button class="filter-btn" data-filter="edit">edits</button>
+      <button class="filter-btn" data-filter="shell">shell</button>
+      <button class="filter-btn" data-filter="response">response</button>
+    </div>
+
+    <!-- Activity Feed -->
+    <div class="activity-feed" id="feed">
+      <div class="activity-feed-empty">Send a message to get started</div>
+    </div>
+
+    <!-- Transcript Toggle -->
+    <div class="transcript-toggle" id="transcript-toggle">&#9650; Show Raw Transcript</div>
+    <div class="transcript-pane" id="transcript-pane"></div>
+
+    <!-- Input Bar -->
+    <div class="input-bar">
+      <input class="input-field" id="input" type="text" placeholder="Type a message or /command..." autofocus>
+      <button class="btn-stop" title="Stop current action (Esc)" id="btn-stop">
+        <span>&#9632;</span> Stop
+      </button>
+      <button class="btn-kill" title="Kill this session" id="btn-kill">&#10005;</button>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="status-bar" id="status-bar">
+      <div class="status-item">
+        <span class="status-dot green" id="status-perm-dot"></span>
+        <span class="status-mode" id="status-mode">code</span>
+      </div>
+      <div class="status-item" id="status-backend" style="font-size:10px"></div>
+      <div class="status-item" id="status-model">-</div>
+      <div class="status-item">
+        <span class="status-dot" id="status-perm-dot2"></span>
+        <span id="status-perms">-</span>
+      </div>
+      <div class="status-item">
+        <span class="status-dot blue"></span>
+        <span id="status-files">0 files edited</span>
+      </div>
+      <div class="status-item" id="status-git">
+        <span id="status-branch"></span>
+      </div>
+      <div class="status-item" id="status-uncommitted"></div>
+      <div class="status-item" id="status-shell-info"></div>
+      <div class="spacer"></div>
+      <div class="status-context">
+        <span id="status-tokens">0</span>
+        <div class="context-bar"><div class="context-fill" id="context-fill" style="width: 0%"></div></div>
+        <span id="status-max-tokens">/ 0</span>
+      </div>
+      <div class="status-item">Esc to stop</div>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Overlay -->
+<div class="settings-overlay" id="settings-overlay">
+  <div class="settings-panel">
+    <button class="settings-close" id="settings-close">&times;</button>
+    <h2>Settings</h2>
+
+    <h3>Global</h3>
+    <div class="settings-row">
+      <label>Default Provider</label>
+      <select id="set-provider">
+        <option value="local">Local (Ollama/llama.cpp/vLLM)</option>
+        <option value="openai-compatible">OpenAI-compatible API</option>
+        <option value="anthropic">Anthropic</option>
+        <option value="openai">OpenAI</option>
+        <option value="custom">Custom</option>
+      </select>
+    </div>
+    <div class="settings-row">
+      <label>Connection</label>
+      <span id="settings-connection-info" style="font-family: var(--font-mono); font-size: 11px; color: var(--text-dim);">-</span>
+    </div>
+    <div class="settings-row">
+      <label>API Key</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input type="password" id="set-api-key" placeholder="Enter new key" style="width:140px">
+        <button id="btn-test-key" style="padding:4px 10px;font-size:10px;font-family:var(--font-mono);background:var(--bg-3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);cursor:pointer">Test</button>
+        <span id="key-test-result" style="font-size:10px;font-family:var(--font-mono)"></span>
+      </div>
+    </div>
+    <div class="settings-row">
+      <label>Default Model</label>
+      <input type="text" id="set-model" placeholder="e.g. GLM-4.7-FP8">
+    </div>
+    <div class="settings-row">
+      <label>Default Mode</label>
+      <select id="set-mode">
+        <option value="code">Code</option>
+        <option value="architect">Architect</option>
+        <option value="ask">Ask</option>
+        <option value="debug">Debug</option>
+      </select>
+    </div>
+    <div class="settings-row">
+      <label>Default Permissions</label>
+      <select id="set-perms">
+        <option value="ask-every-time">Ask every time</option>
+        <option value="allow-reads">Allow reads</option>
+        <option value="allow-for-session">Allow for session</option>
+        <option value="yolo">Yolo</option>
+      </select>
+    </div>
+    <div class="settings-row">
+      <label>Theme</label>
+      <select id="set-theme">
+        <option value="dark">Dark (default)</option>
+        <option value="light">Light</option>
+        <option value="high-contrast">High Contrast</option>
+      </select>
+    </div>
+    <div class="settings-row">
+      <label>UI Density</label>
+      <select id="set-density">
+        <option value="comfortable">Comfortable</option>
+        <option value="compact">Compact</option>
+      </select>
+    </div>
+    <div class="settings-row">
+      <label>Transcript Logging</label>
+      <select id="set-transcript">
+        <option value="off">Off</option>
+        <option value="on">On</option>
+      </select>
+    </div>
+    <div class="settings-row">
+      <label>Max Context Tokens</label>
+      <input type="number" id="set-max-tokens" placeholder="64000">
+    </div>
+
+    <h3>Per-Tab Overrides</h3>
+    <div class="settings-row">
+      <label>Provider (this tab)</label>
+      <select id="set-tab-provider">
+        <option value="">Use global</option>
+        <option value="local">Local</option>
+        <option value="anthropic">Anthropic</option>
+        <option value="openai">OpenAI</option>
+      </select>
+    </div>
+    <div class="settings-row">
+      <label>Model (this tab)</label>
+      <input type="text" id="set-tab-model" placeholder="Use global default">
+    </div>
+    <div class="settings-row">
+      <label>Shell Allowed</label>
+      <select id="set-shell">
+        <option value="yes">Yes</option>
+        <option value="no">No</option>
+      </select>
+    </div>
+    <div class="settings-row">
+      <label>Edits Allowed</label>
+      <select id="set-edits">
+        <option value="yes">Yes</option>
+        <option value="no">No</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<!-- New Tab Dialog -->
+<div class="new-tab-dialog" id="new-tab-dialog">
+  <div class="new-tab-form" style="width:500px">
+    <h3>New Workspace</h3>
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
+      <input type="text" id="new-tab-cwd" placeholder="Working directory" style="margin-bottom:0;flex:1">
+      <button id="btn-browse-go" style="padding:8px 12px;font-size:11px;font-family:var(--font-mono);background:var(--bg-3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);cursor:pointer;white-space:nowrap">Go</button>
+    </div>
+    <div id="folder-browser" style="background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-sm);height:220px;overflow-y:auto;margin-bottom:10px;font-family:var(--font-mono);font-size:12px">
+      <div style="padding:12px;color:var(--text-muted);font-style:italic">Loading...</div>
+    </div>
+    <div class="settings-row" style="margin:8px 0;padding:0;border:none">
+      <label style="font-size:12px;color:var(--text-dim)">Backend</label>
+      <select id="new-tab-backend" style="background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;font-family:var(--font-mono);font-size:12px;color:var(--text);width:220px">
+        <option value="danucode">Danucode (deep supervision)</option>
+        <option value="claude-code">Claude Code (standard)</option>
+        <option value="opencode">OpenCode (standard)</option>
+      </select>
+    </div>
+    <div class="btn-row">
+      <button id="new-tab-cancel">Cancel</button>
+      <button class="primary" id="new-tab-create">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Kill Confirm Dialog -->
+<div class="kill-dialog" id="kill-dialog">
+  <div class="kill-dialog-box">
+    <p>Kill this session? Conversation will be lost unless saved.</p>
+    <div class="btn-row">
+      <button id="kill-cancel">Cancel</button>
+      <button class="danger" id="kill-confirm">Kill Session</button>
+    </div>
+  </div>
+</div>
+
+<!-- Permission Dialog -->
+<div class="permission-dialog" id="permission-dialog">
+  <div class="permission-dialog-box">
+    <p>Allow <strong id="perm-tool"></strong>?</p>
+    <p id="perm-detail" class="perm-detail"></p>
+    <div class="btn-row">
+      <button id="perm-deny">Deny (n)</button>
+      <button id="perm-allow" class="primary">Allow (y)</button>
+      <button id="perm-always">Always (a)</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

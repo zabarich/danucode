@@ -83,7 +83,7 @@ async function runDoctor() {
 
 function parseArgs() {
   const args = process.argv.slice(2);
-  const opts = { config: undefined, yolo: false, model: undefined, command: undefined, session: undefined };
+  const opts = { config: undefined, yolo: false, model: undefined, command: undefined, session: undefined, gui: false, serve: false, port: undefined };
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
       case '--config': opts.config = args[++i]; break;
@@ -93,16 +93,41 @@ function parseArgs() {
       case '-c':
       case '--command': opts.command = args[++i]; break;
       case '--session': opts.session = args[++i]; break;
+      case '--gui': opts.gui = true; break;
+      case '--serve': opts.serve = true; break;
+      case '--port': opts.port = parseInt(args[++i], 10); break;
       case '--version':
       case '-v':
         console.log(getVersion());
         process.exit(0);
       case '--help':
-        console.log(`\nUsage: danu [options|subcommand]\n\nSubcommands:\n  doctor                            Check system setup and LLM connectivity\n\nOptions:\n  --config <path>                   Path to danu.config.json\n  --model <name>                    Override model name\n  -c, --command <cmd>               One-shot mode: run command and exit\n  --session <name>                  Named session (persistent across runs)\n  --yolo                            Skip all permission prompts\n  --dangerously-skip-permissions    Same as --yolo\n  -v, --version                     Show version\n  --help                            Show this help\n`);
+        console.log(`\nUsage: danu [options|subcommand]\n\nSubcommands:\n  doctor                            Check system setup and LLM connectivity\n  console stop                      Stop the background console server\n  console status                    Check if console is running\n\nOptions:\n  --config <path>                   Path to danu.config.json\n  --model <name>                    Override model name\n  -c, --command <cmd>               One-shot mode: run command and exit\n  --session <name>                  Named session (persistent across runs)\n  --gui                             Launch web console (background, opens browser)\n  --serve                           Start server foreground (no browser)\n  --port <number>                   Port for --gui/--serve (default: 3000)\n  --yolo                            Skip all permission prompts\n  --dangerously-skip-permissions    Same as --yolo\n  -v, --version                     Show version\n  --help                            Show this help\n`);
         process.exit(0);
     }
   }
   return opts;
+}
+
+async function openBrowser(url) {
+  try {
+    const open = (await import('open')).default;
+    const cp = await open(url);
+    // Wait for the spawned browser process to detach
+    await new Promise(r => setTimeout(r, 1000));
+  } catch {
+    // Fallback: use platform-native command directly
+    try {
+      if (process.platform === 'win32') {
+        execSync(`start "" "${url}"`, { stdio: 'ignore' });
+      } else if (process.platform === 'darwin') {
+        execSync(`open "${url}"`, { stdio: 'ignore' });
+      } else {
+        execSync(`xdg-open "${url}"`, { stdio: 'ignore' });
+      }
+    } catch {
+      console.log(chalk.dim(`  Open ${url} in your browser`));
+    }
+  }
 }
 
 function getProjectName() {
@@ -333,7 +358,7 @@ function autoSave(conversation, sessionName) {
 }
 
 async function main() {
-  // Check for doctor subcommand before parseArgs
+  // Check for subcommands before parseArgs
   const subcommand = process.argv[2];
   if (subcommand === 'doctor') {
     try {
@@ -343,6 +368,35 @@ async function main() {
     }
     await runDoctor();
     process.exit(0);
+  }
+
+  // console subcommand: danu console stop / danu console status
+  if (subcommand === 'console') {
+    const action = process.argv[3];
+    const { readConsoleState, isConsoleRunning, stopConsole } = await import('../src/serve.js');
+
+    if (action === 'stop') {
+      const result = stopConsole();
+      if (result.ok) {
+        console.log(chalk.green(`  Console stopped (PID ${result.pid}, was on port ${result.port})`));
+      } else {
+        console.log(chalk.dim(`  ${result.reason}`));
+      }
+      process.exit(0);
+    }
+
+    if (action === 'status') {
+      if (isConsoleRunning()) {
+        const st = readConsoleState();
+        console.log(chalk.green(`  Console running — http://localhost:${st.port} (PID ${st.pid})`));
+      } else {
+        console.log(chalk.dim('  Console is not running'));
+      }
+      process.exit(0);
+    }
+
+    console.log('Usage: danu console [stop|status]');
+    process.exit(1);
   }
 
   const opts = parseArgs();
@@ -364,6 +418,62 @@ async function main() {
   await loadCustomTools();
   await initLsp();
   checkForUpdates().then(showUpdateNotice).catch(() => {});
+
+  // GUI mode: spawn detached server and open browser, then exit
+  if (opts.gui) {
+    const { isConsoleRunning, readConsoleState } = await import('../src/serve.js');
+
+    // If already running, just open the browser
+    if (isConsoleRunning()) {
+      const st = readConsoleState();
+      console.log(chalk.green(`  Console already running on http://localhost:${st.port}`));
+      await openBrowser(`http://localhost:${st.port}`);
+      process.exit(0);
+    }
+
+    const port = opts.port || 3000;
+
+    // Build args for the detached child: --serve --port N (plus forwarded flags)
+    const childArgs = [process.argv[1], '--serve', '--port', String(port)];
+    if (opts.config) childArgs.push('--config', opts.config);
+    if (opts.model) childArgs.push('--model', opts.model);
+    if (opts.yolo) childArgs.push('--yolo');
+
+    const { spawn } = await import('node:child_process');
+    const child = spawn(process.execPath, childArgs, {
+      detached: true,
+      stdio: 'ignore',
+      cwd: process.cwd(),
+      windowsHide: true,
+    });
+    child.unref();
+
+    // Wait briefly for the server to start, then open browser
+    await new Promise(r => setTimeout(r, 1500));
+
+    console.log('');
+    console.log(chalk.green('  Danucode Console'));
+    console.log(chalk.dim(`  v${getVersion()} · ${getConfig().model}`));
+    console.log(chalk.dim(`  http://localhost:${port} (background, PID ${child.pid})`));
+    console.log(chalk.dim('  danu console stop   — shut it down'));
+    console.log(chalk.dim('  danu console status — check if running'));
+    console.log('');
+
+    await openBrowser(`http://localhost:${port}`);
+
+    process.exit(0);
+  }
+
+  // Serve mode: foreground server (used by detached child, or standalone)
+  if (opts.serve) {
+    const { startServer } = await import('../src/serve.js');
+    const port = opts.port || 3000;
+    if (opts.yolo) setSkipPermissions(true);
+
+    await startServer({ port, openBrowser: false });
+    // Keep process alive — server handles everything
+    return;
+  }
 
   const config = getConfig();
   const conversation = createConversation();
@@ -387,13 +497,20 @@ async function main() {
 
   // One-shot mode: run command and exit
   if (opts.command) {
+    // One-shot without --yolo needs a readline for permission prompts
+    let rl = null;
+    if (!opts.yolo) {
+      const readline = await import('node:readline/promises');
+      rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    }
     addToHistory(opts.command.trim(), process.cwd(), opts.session || '');
     const parts = opts.command.split(';').map(s => s.trim()).filter(s => s.length > 0);
     for (const part of parts) {
       if (await handleCommand(part, conversation)) continue;
-      await conversation.send(part, null);
+      await conversation.send(part, rl);
       autoSave(conversation, opts.session);
     }
+    if (rl) rl.close();
     shutdown();
     process.exit(0);
   }
