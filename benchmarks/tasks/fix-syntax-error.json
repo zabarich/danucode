@@ -1,0 +1,19 @@
+{
+  "id": "fix-syntax-error",
+  "name": "Fix a syntax error",
+  "description": "Given a JavaScript file with a syntax error, fix it so the test passes.",
+  "difficulty": "easy",
+  "setup": {
+    "files": {
+      "src/utils.js": "export function add(a, b) {\n  return a + b;\n}\n\nexport function multiply(a, b) {\n  return a * b\n}\n\nexport function divide(a, b) {\n  if (b === 0) throw new Error('Division by zero');\n  return a / b;\n}\n\nexport function factorial(n) {\n  if (n < 0) throw new Error('Negative input');\n  if (n <= 1) return 1;\n  return n * factorial(n - 1;\n}\n",
+      "test.js": "import { add, multiply, divide, factorial } from './src/utils.js';\nimport assert from 'node:assert/strict';\n\nassert.equal(add(2, 3), 5);\nassert.equal(multiply(4, 5), 20);\nassert.equal(divide(10, 2), 5);\nassert.equal(factorial(5), 120);\nassert.throws(() => divide(1, 0));\nassert.throws(() => factorial(-1));\nconsole.log('All tests passed');\n"
+    }
+  },
+  "prompt": "The file src/utils.js has a syntax error. Fix it so that running `node test.js` passes all tests.",
+  "verify": {
+    "command": "node test.js",
+    "expected_exit_code": 0,
+    "expected_stdout_contains": "All tests passed"
+  },
+  "metrics": ["pass", "tool_calls", "duration"]
+}

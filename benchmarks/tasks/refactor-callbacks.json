@@ -1,0 +1,19 @@
+{
+  "id": "refactor-callbacks",
+  "name": "Refactor callbacks to async/await",
+  "description": "Convert a callback-based module to use async/await. Tests verify both functionality and that no callbacks remain.",
+  "difficulty": "medium",
+  "setup": {
+    "files": {
+      "src/data.js": "import { readFile, writeFile } from 'node:fs';\n\nexport function loadConfig(path, callback) {\n  readFile(path, 'utf-8', (err, data) => {\n    if (err) return callback(err);\n    try {\n      const parsed = JSON.parse(data);\n      callback(null, parsed);\n    } catch (e) {\n      callback(e);\n    }\n  });\n}\n\nexport function saveConfig(path, config, callback) {\n  const json = JSON.stringify(config, null, 2);\n  writeFile(path, json, 'utf-8', (err) => {\n    if (err) return callback(err);\n    callback(null, true);\n  });\n}\n\nexport function loadAndMerge(basePath, overridePath, callback) {\n  loadConfig(basePath, (err, base) => {\n    if (err) return callback(err);\n    loadConfig(overridePath, (err2, override) => {\n      if (err2) return callback(null, base);\n      callback(null, { ...base, ...override });\n    });\n  });\n}\n",
+      "test.js": "import { loadConfig, saveConfig, loadAndMerge } from './src/data.js';\nimport { writeFileSync, mkdirSync, rmSync } from 'node:fs';\nimport assert from 'node:assert/strict';\n\nconst dir = '/tmp/bench-refactor-test';\nmkdirSync(dir, { recursive: true });\n\ntry {\n  // Setup\n  writeFileSync(`${dir}/base.json`, JSON.stringify({ a: 1, b: 2 }));\n  writeFileSync(`${dir}/override.json`, JSON.stringify({ b: 99, c: 3 }));\n\n  // Test loadConfig returns a promise\n  const result = loadConfig(`${dir}/base.json`);\n  assert.ok(result instanceof Promise, 'loadConfig must return a Promise');\n\n  const config = await result;\n  assert.deepEqual(config, { a: 1, b: 2 });\n\n  // Test saveConfig returns a promise\n  const saveResult = saveConfig(`${dir}/out.json`, { x: 1 });\n  assert.ok(saveResult instanceof Promise, 'saveConfig must return a Promise');\n  await saveResult;\n\n  // Test loadAndMerge returns a promise\n  const merged = await loadAndMerge(`${dir}/base.json`, `${dir}/override.json`);\n  assert.deepEqual(merged, { a: 1, b: 99, c: 3 });\n\n  // Test error handling\n  await assert.rejects(() => loadConfig('/nonexistent/path.json'));\n\n  // Test fallback when override doesn't exist\n  const fallback = await loadAndMerge(`${dir}/base.json`, '/nonexistent.json');\n  assert.deepEqual(fallback, { a: 1, b: 2 });\n\n  console.log('All tests passed');\n} finally {\n  rmSync(dir, { recursive: true, force: true });\n}\n"
+    }
+  },
+  "prompt": "Refactor src/data.js to use async/await instead of callbacks. All three functions should return Promises. The callback parameters must be removed. Do not change test.js. Make `node test.js` pass.",
+  "verify": {
+    "command": "node test.js",
+    "expected_exit_code": 0,
+    "expected_stdout_contains": "All tests passed"
+  },
+  "metrics": ["pass", "tool_calls", "duration"]
+}

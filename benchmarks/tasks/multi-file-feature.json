@@ -1,0 +1,20 @@
+{
+  "id": "multi-file-feature",
+  "name": "Implement a feature across multiple files",
+  "description": "Add input validation to a REST-like handler with a separate validator module. Tests are provided.",
+  "difficulty": "hard",
+  "setup": {
+    "files": {
+      "src/handler.js": "// Request handler for creating users\nexport function createUser(body) {\n  return {\n    id: Math.random().toString(36).slice(2),\n    name: body.name,\n    email: body.email,\n    createdAt: new Date().toISOString(),\n  };\n}\n\nexport function updateUser(existing, changes) {\n  return { ...existing, ...changes, updatedAt: new Date().toISOString() };\n}\n",
+      "src/validator.js": "// TODO: Implement validation functions\n// validateCreateUser(body) - returns { valid: boolean, errors: string[] }\n// validateEmail(email) - returns boolean\n",
+      "test.js": "import { createUser, updateUser } from './src/handler.js';\nimport { validateCreateUser, validateEmail } from './src/validator.js';\nimport assert from 'node:assert/strict';\n\n// Validator tests\nassert.equal(validateEmail('user@example.com'), true);\nassert.equal(validateEmail('user@sub.domain.com'), true);\nassert.equal(validateEmail('notanemail'), false);\nassert.equal(validateEmail(''), false);\nassert.equal(validateEmail('@domain.com'), false);\nassert.equal(validateEmail('user@'), false);\n\nconst valid = validateCreateUser({ name: 'Alice', email: 'alice@example.com' });\nassert.equal(valid.valid, true);\nassert.deepEqual(valid.errors, []);\n\nconst noName = validateCreateUser({ email: 'test@test.com' });\nassert.equal(noName.valid, false);\nassert.ok(noName.errors.some(e => e.toLowerCase().includes('name')));\n\nconst noEmail = validateCreateUser({ name: 'Bob' });\nassert.equal(noEmail.valid, false);\nassert.ok(noEmail.errors.some(e => e.toLowerCase().includes('email')));\n\nconst badEmail = validateCreateUser({ name: 'Charlie', email: 'notvalid' });\nassert.equal(badEmail.valid, false);\nassert.ok(badEmail.errors.some(e => e.toLowerCase().includes('email')));\n\nconst empty = validateCreateUser({});\nassert.equal(empty.valid, false);\nassert.ok(empty.errors.length >= 2);\n\n// Handler still works\nconst user = createUser({ name: 'Test', email: 'test@test.com' });\nassert.equal(user.name, 'Test');\nassert.equal(user.email, 'test@test.com');\nassert.ok(user.id);\nassert.ok(user.createdAt);\n\nconst updated = updateUser(user, { name: 'Updated' });\nassert.equal(updated.name, 'Updated');\nassert.equal(updated.email, 'test@test.com');\nassert.ok(updated.updatedAt);\n\nconsole.log('All tests passed');\n"
+    }
+  },
+  "prompt": "Implement the validation functions in src/validator.js: validateEmail(email) returns boolean, validateCreateUser(body) returns { valid, errors }. Name is required (non-empty string), email is required and must be valid. Do not modify test.js. Make `node test.js` pass.",
+  "verify": {
+    "command": "node test.js",
+    "expected_exit_code": 0,
+    "expected_stdout_contains": "All tests passed"
+  },
+  "metrics": ["pass", "tool_calls", "duration"]
+}

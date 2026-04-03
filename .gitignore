@@ -13,3 +13,4 @@ test-*.json
 *.secret
 *.key
 *.pem
+benchmarks/results/

@@ -1,0 +1,19 @@
+{
+  "id": "add-feature",
+  "name": "Add a function to an existing module",
+  "description": "Add a fibonacci function to a math utilities module. Tests are provided.",
+  "difficulty": "easy",
+  "setup": {
+    "files": {
+      "src/math.js": "export function isPrime(n) {\n  if (n < 2) return false;\n  for (let i = 2; i <= Math.sqrt(n); i++) {\n    if (n % i === 0) return false;\n  }\n  return true;\n}\n\nexport function gcd(a, b) {\n  while (b) {\n    [a, b] = [b, a % b];\n  }\n  return a;\n}\n",
+      "test.js": "import { isPrime, gcd, fibonacci } from './src/math.js';\nimport assert from 'node:assert/strict';\n\nassert.equal(isPrime(7), true);\nassert.equal(isPrime(4), false);\nassert.equal(gcd(12, 8), 4);\nassert.equal(fibonacci(0), 0);\nassert.equal(fibonacci(1), 1);\nassert.equal(fibonacci(10), 55);\nassert.equal(fibonacci(20), 6765);\nconsole.log('All tests passed');\n"
+    }
+  },
+  "prompt": "Add a fibonacci(n) function to src/math.js. The test.js file already imports and tests it. Make `node test.js` pass.",
+  "verify": {
+    "command": "node test.js",
+    "expected_exit_code": 0,
+    "expected_stdout_contains": "All tests passed"
+  },
+  "metrics": ["pass", "tool_calls", "duration"]
+}
