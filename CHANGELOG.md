@@ -1,5 +1,38 @@
 # Changelog
 
+## v1.2.0 (2026-04-04)
+
+Danucode learns from experience and improves itself.
+
+### Auto-Learning
+- **Post-session reflection** -- when a session ends, an LLM reflection pass reviews tool outcomes, errors, and user corrections to extract insights worth remembering
+- **Graph memory enrichment** -- learnings are stored as typed nodes with keyword-matched edges in the graph memory, injected into future system prompts
+- **Crash recovery** -- events are buffered to `~/.danu/sessions/pending-learn.jsonl` incrementally; if a session crashes, learnings are recovered on next startup
+- **Always-on** -- enabled by default. Set `auto_learn: false` in config to disable. Set `auto_learn_model` to use a different model for reflection
+- **Smart filtering** -- only tool outcomes, errors, and user messages are sent to reflection, not the full conversation
+- `/clear` now also clears the pending-learn buffer
+- `core/auto-learn.js` exported from the SDK public API
+- 17 new tests covering event buffering, learning application, crash recovery, and edge creation
+
+### Benchmark Harness
+- **5 coding tasks** across 3 difficulty levels: fix-syntax-error (easy), add-feature (easy), refactor-callbacks (medium), debug-logic-error (medium), multi-file-feature (hard)
+- **Automated runner** -- `node benchmarks/run.js` sets up isolated temp directories, runs danu in one-shot `--json` mode, verifies results via test commands
+- **Scoring** -- tracks pass/fail, tool call count, duration, and errors per task
+- **Results history** -- `--results` shows past runs, `--compare` diffs the last two
+- **Extensible** -- add tasks as JSON files in `benchmarks/tasks/`
+
+### Self-Improvement Loop
+- **Meta-agent** -- `node benchmarks/improve.js` analyses benchmark results and the current system prompt, proposes targeted find-and-replace changes
+- **Keep or revert** -- changes that improve benchmark scores are kept; regressions are automatically rolled back
+- **Scoring** -- pass rate (primary, 100pts) + tool call efficiency (secondary, up to 20pts). Pass count regressions are always reverted
+- **Iteration support** -- `--iterations N` runs multiple improvement cycles; `--dry-run` shows proposals without applying
+- **First result** -- meta-agent added two directives that improved score from 77.0 → 113.8 (3/5 → 5/5 passing)
+- Improve log and backup files are gitignored
+
+### Stats
+- 87 tests (up from 70)
+- 4 new files: `core/auto-learn.js`, `test/auto-learn.test.js`, `benchmarks/run.js`, `benchmarks/improve.js`
+
 ## v1.0.0 (2026-04-03)
 
 SDK architecture. Danucode is now a two-layer system: an importable core library with zero terminal dependencies, and a CLI built on top of it.
