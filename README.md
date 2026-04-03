@@ -13,9 +13,23 @@ The core is an importable library with zero terminal dependencies. The CLI is bu
 npm install danucode
 ```
 
-## What's New in v1.0.0
+## What's New in v1.1.0
 
-Danucode has been refactored from a monolithic CLI into a two-layer SDK + CLI architecture:
+**Graph memory** replaces the flat JSON memory system with a relationship graph:
+
+- **Typed nodes** -- memories are classified as `concept`, `file`, `pattern`, `preference`, or `decision`
+- **Relationship edges** -- `relates-to`, `depends-on`, `caused-by`, `prefers`, `references` between nodes
+- **BFS traversal** -- `/memory related <id>` walks the graph to find connected memories
+- **Relevance scoring** -- system prompt injection ranks memories by project match, recency, type, connectivity, and access frequency with diversity enforcement (max 5 per type, content deduplication)
+- **Keyword extraction** -- bidirectional prefix matching ("env" finds "environment" and vice versa), duplicate detection ignoring generic tokens
+- **Pinning** -- `/memory pin <id>` protects important nodes from pruning and scoring decay. Preference and decision nodes auto-pin.
+- **Degree caps** -- nodes max out at 12 edges (16 if pinned) to prevent hub explosion
+- **LLM tools** -- `MemoryStore` and `MemoryQuery` let the agent create and search memories during conversation
+- **Auto-migration** -- existing `memories.json` converts to `graph.json` on first load (zero edges, no data loss)
+
+New commands: `/memory link`, `/memory related`, `/memory graph`, `/memory pin`
+
+### v1.0.0
 
 - **Importable Agent class** -- `import { Agent } from 'danucode'` gives you the full agent engine as a library
 - **Structured event system** -- every LLM response, tool call, and state change is an `EventEmitter` event with risk classification
@@ -168,7 +182,8 @@ danucode/
     permissions.js       Permission policy engine (not prompts)
     api.js               LLM clients (OpenAI-compatible + Anthropic native)
     context.js           Token estimation, compaction
-    tools/               15 built-in tools
+    memory.js            Graph memory (nodes, edges, BFS, relevance scoring)
+    tools/               17 built-in tools (including MemoryStore, MemoryQuery)
     ...
 
   cli/                   Terminal UI (imports from core/, never the reverse)
@@ -200,13 +215,13 @@ The dependency arrow goes one way: **cli/ -> core/**. Nothing in `core/` imports
 | **Modes** | code, architect, ask, debug | code, architect, ask | Interactive, headless |
 | **MCP support** | Configurable | No | Extensive |
 | **Sub-agents** | Agent tool + SendMessage | No | Agent Teams |
-| **Maturity** | v1.0.0 | Production (years) | Production (Anthropic-backed) |
+| **Maturity** | v1.1.0 | Production (years) | Production (Anthropic-backed) |
 
 If you want the most capable tool, use Claude Code. If you want proven open-source with broad model support, use Aider. If you want an embeddable agent SDK for JavaScript that you can fully understand, modify, and point at your own infrastructure -- that is what Danucode is for.
 
 ## Features
 
-**15 Tools:** Bash, Read, Write, Edit, Grep, Glob, Patch, Agent, SendMessage, WebSearch, WebFetch, GitHub, LSP, NotebookEdit, Tasks
+**17 Tools:** Bash, Read, Write, Edit, Grep, Glob, Patch, Agent, SendMessage, WebSearch, WebFetch, GitHub, LSP, NotebookEdit, Tasks, MemoryStore, MemoryQuery
 
 **4 Modes:** `code` (full access) -- `architect` (read-only + markdown) -- `ask` (read-only) -- `debug` (diagnostic focus)
 
@@ -214,7 +229,7 @@ If you want the most capable tool, use Claude Code. If you want proven open-sour
 
 **Project context:** `DANUCODE.md` loaded into the system prompt -- `/init` generates one
 
-**Memory:** `/memory save` persists preferences across sessions
+**Graph memory:** Relationship graph at `~/.danu/memory/graph.json` with typed nodes and edges. `/memory save` creates nodes, `/memory link` connects them, `/memory related` traverses connections, `/memory graph` shows the full structure, `/memory pin` protects important nodes. Relevant memories are scored and injected into the system prompt automatically. The LLM can also create and query memories via `MemoryStore` and `MemoryQuery` tools.
 
 **Sessions:** `--session name` auto-saves and resumes
 
@@ -249,7 +264,7 @@ See `danu.config.example.json` for all options.
 npm test
 ```
 
-30 tests covering tool execution, permission boundaries, token estimation, and context management. Node.js built-in test runner, no external framework.
+70 tests covering tool execution, permission boundaries, token estimation, context management, and graph memory (CRUD, deduplication, BFS traversal, keyword extraction, relevance scoring, pruning, migration). Node.js built-in test runner, no external framework.
 
 ## Security
 
@@ -259,11 +274,9 @@ Key points: permission prompts by default, `.danuignore` for sensitive files, pl
 
 ## Roadmap
 
-v1.1.0 priorities:
-- Graph memory (indexed relationship store replacing flat JSON files)
+Next priorities:
 - Model compatibility matrix (which models work well with tool calling)
 - Skills system (markdown prompt templates)
-- Deeper test coverage
 
 See [CHANGELOG.md](CHANGELOG.md) for what's already built.
 
