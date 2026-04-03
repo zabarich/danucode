@@ -15,9 +15,31 @@ npm install danucode
 
 ## What's New
 
-### Auto-Learning (latest)
+### Self-Improvement Loop (latest)
 
-Danucode now **learns automatically from every session**. When a session ends, a lightweight LLM reflection pass reviews what happened — tool failures, user corrections, error patterns — and extracts insights worth remembering into the graph memory. No user action required.
+Danucode can now **improve its own system prompt** by running benchmarks, analysing results, and applying targeted changes. A meta-agent proposes modifications, the benchmark harness measures the impact, and regressions are automatically reverted.
+
+```bash
+node benchmarks/improve.js                    # one improvement iteration
+node benchmarks/improve.js --iterations 5     # run N iterations
+node benchmarks/improve.js --dry-run          # show proposed changes without applying
+```
+
+- **Benchmark-driven** -- 5 coding tasks across 3 difficulty levels (syntax fixes, feature implementation, refactoring, debugging, multi-file changes)
+- **Keep or revert** -- changes that improve scores are kept, regressions are automatically rolled back
+- **Minimal edits** -- meta-agent makes targeted find-and-replace changes, not full rewrites
+- **Scoring** -- pass rate (primary) + tool call efficiency (secondary). Pass count regressions are always reverted.
+- **Logged** -- every iteration is recorded with analysis, changes applied/reverted, and before/after scores
+
+```bash
+node benchmarks/run.js                        # run benchmark suite
+node benchmarks/run.js --results              # show past results
+node benchmarks/run.js --compare              # compare last two runs
+```
+
+### Auto-Learning
+
+Danucode **learns automatically from every session**. When a session ends, a lightweight LLM reflection pass reviews what happened — tool failures, user corrections, error patterns — and extracts insights worth remembering into the graph memory. No user action required.
 
 - **Post-session reflection** -- an LLM call at session end asks "what from this session is worth remembering?"
 - **Crash recovery** -- events are buffered to disk incrementally. If a session crashes, learnings are recovered on next startup
@@ -209,6 +231,11 @@ danucode/
     ...
 
   bin/danu.js            CLI entry point
+
+  benchmarks/
+    run.js               Benchmark runner (setup, execute, verify, score)
+    improve.js           Self-improvement loop (analyse, patch, benchmark, keep/revert)
+    tasks/               Task definitions (JSON: setup files, prompt, verify command)
 ```
 
 The dependency arrow goes one way: **cli/ -> core/**. Nothing in `core/` imports from `cli/`. Nothing in `core/` uses `console.log`, `chalk`, `ink`, `react`, or `readline`.
@@ -231,6 +258,7 @@ The dependency arrow goes one way: **cli/ -> core/**. Nothing in `core/` imports
 | **MCP support** | Configurable | No | Extensive |
 | **Sub-agents** | Agent tool + SendMessage | No | Agent Teams |
 | **Auto-learning** | Yes -- post-session reflection enriches memory | No | No |
+| **Self-improvement** | Yes -- meta-agent optimises prompts via benchmarks | No | No |
 | **Maturity** | v1.1.0 | Production (years) | Production (Anthropic-backed) |
 
 If you want the most capable tool, use Claude Code. If you want proven open-source with broad model support, use Aider. If you want an embeddable agent SDK for JavaScript that you can fully understand, modify, and point at your own infrastructure -- that is what Danucode is for.
@@ -248,6 +276,8 @@ If you want the most capable tool, use Claude Code. If you want proven open-sour
 **Graph memory:** Relationship graph at `~/.danu/memory/graph.json` with typed nodes and edges. `/memory save` creates nodes, `/memory link` connects them, `/memory related` traverses connections, `/memory graph` shows the full structure, `/memory pin` protects important nodes. Relevant memories are scored and injected into the system prompt automatically. The LLM can also create and query memories via `MemoryStore` and `MemoryQuery` tools.
 
 **Auto-learning:** The graph enriches itself after every session. A post-session LLM reflection pass extracts patterns, conventions, and decisions from tool outcomes and user corrections. Crash-safe via append-only event buffer with recovery on next startup.
+
+**Self-improvement:** `node benchmarks/improve.js` runs a meta-agent loop: benchmark → analyse → patch system prompt → re-benchmark → keep or revert. The agent literally improves its own instructions.
 
 **Sessions:** `--session name` auto-saves and resumes
 
@@ -293,10 +323,9 @@ Key points: permission prompts by default, `.danuignore` for sensitive files, pl
 ## Roadmap
 
 Next priorities:
-- Benchmark harness (repeatable test suite to measure agent performance)
-- Self-improvement loop (meta-agent optimises prompts, benchmarks scores, keep or revert)
 - Skills system (markdown prompt templates)
 - Model compatibility matrix (which models work well with tool calling)
+- More benchmark tasks (expand coverage for self-improvement loop)
 
 See [CHANGELOG.md](CHANGELOG.md) for what's already built.
 
