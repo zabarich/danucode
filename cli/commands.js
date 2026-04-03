@@ -12,6 +12,7 @@ import { undo, redo, getHistoryCount, getRedoCount } from '../core/filetracker.j
 import { getVersion } from './updater.js';
 import { getConfig, setModel } from '../core/api.js';
 import { getFileAccessCounts } from '../core/loop.js';
+import { loadGraph, saveGraph, addNode, removeNode, findNodes, queryRelated, addEdge, getEdges } from '../core/memory.js';
 
 const MEMORY_DIR = join(homedir(), '.danu', 'memory');
 const SESSION_DIR = join(homedir(), '.danu', 'sessions');
@@ -185,66 +186,189 @@ function buildTemplate(info) {
   return md;
 }
 
-// /memory save <text> — save a memory
+// /memory save <text> — save a memory to the graph
 export function handleMemorySave(text) {
   if (!text.trim()) {
     console.log(chalk.yellow('\n  Usage: /memory save <something to remember>'));
     return true;
   }
 
-  mkdirSync(MEMORY_DIR, { recursive: true });
+  // Detect type from optional flag: /memory save --type preference ...
+  let type = 'concept';
+  let content = text.trim();
+  const typeMatch = content.match(/^--type\s+(concept|file|pattern|preference|decision)\s+/i);
+  if (typeMatch) {
+    type = typeMatch[1].toLowerCase();
+    content = content.slice(typeMatch[0].length);
+  }
 
-  const memories = loadMemories();
-  memories.push({
-    text: text.trim(),
-    date: new Date().toISOString(),
-    cwd: process.cwd(),
-  });
+  const nodeId = addNode({ type, text: content, project: process.cwd() });
+  if (!nodeId) {
+    console.log(chalk.yellow('\n  Memory rejected: text too short or too few meaningful keywords.'));
+    return true;
+  }
+  saveGraph();
 
-  writeFileSync(join(MEMORY_DIR, 'memories.json'), JSON.stringify(memories, null, 2), 'utf-8');
-  console.log(chalk.green(`\n  Remembered: "${text.trim()}"`));
+  const node = loadGraph().nodes[nodeId];
+  const pin = node?.pinned ? ' (pinned)' : '';
+  console.log(chalk.green(`\n  Remembered [${type}]${pin}: "${content}"`));
+  console.log(chalk.dim(`  ID: ${nodeId}`));
   return true;
 }
 
-// /memory list — list all memories
+// /memory list — list all memories from graph
 export function handleMemoryList() {
-  const memories = loadMemories();
+  const graph = loadGraph();
+  const nodes = Object.values(graph.nodes);
 
-  if (memories.length === 0) {
+  if (nodes.length === 0) {
     console.log(chalk.dim('\n  No memories saved. Use /memory save <text> to add one.'));
     return true;
   }
 
-  console.log(chalk.green(`\n  Memories (${memories.length}):`));
-  for (let i = 0; i < memories.length; i++) {
-    const m = memories[i];
-    const date = m.date.split('T')[0];
-    console.log(chalk.dim(`  ${i + 1}. [${date}] `) + chalk.white(m.text));
+  // Sort by creation date (newest first)
+  nodes.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  console.log(chalk.green(`\n  Memories (${nodes.length} nodes, ${graph.edges.length} edges):`));
+  for (let i = 0; i < nodes.length; i++) {
+    const n = nodes[i];
+    const date = n.createdAt.split('T')[0];
+    const edges = (graph.adjacency[n.id] || []).length;
+    const pin = n.pinned ? chalk.yellow(' *') : '';
+    const edgeBadge = edges > 0 ? chalk.dim(` (${edges} edges)`) : '';
+    console.log(chalk.dim(`  ${i + 1}. `) + chalk.cyan(`[${n.type}]`) + ` ${chalk.white(n.text)}${pin}${edgeBadge}`);
+    console.log(chalk.dim(`     ${n.id} · ${date} · ${n.project}`));
   }
   return true;
 }
 
-// /memory forget <number> — delete a memory by index
-export function handleMemoryForget(indexStr) {
-  const idx = parseInt(indexStr) - 1;
-  const memories = loadMemories();
+// /memory forget <id-or-number> — delete a memory
+export function handleMemoryForget(arg) {
+  const graph = loadGraph();
+  const nodes = Object.values(graph.nodes).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-  if (isNaN(idx) || idx < 0 || idx >= memories.length) {
-    console.log(chalk.yellow(`\n  Usage: /memory forget <number> (1-${memories.length})`));
+  let nodeId;
+  if (arg.startsWith('n_')) {
+    nodeId = arg;
+  } else {
+    const idx = parseInt(arg) - 1;
+    if (isNaN(idx) || idx < 0 || idx >= nodes.length) {
+      console.log(chalk.yellow(`\n  Usage: /memory forget <id or number> (1-${nodes.length})`));
+      return true;
+    }
+    nodeId = nodes[idx].id;
+  }
+
+  const node = graph.nodes[nodeId];
+  if (!node) {
+    console.log(chalk.yellow(`\n  Node not found: ${nodeId}`));
     return true;
   }
 
-  const removed = memories.splice(idx, 1)[0];
-  writeFileSync(join(MEMORY_DIR, 'memories.json'), JSON.stringify(memories, null, 2), 'utf-8');
-  console.log(chalk.green(`\n  Forgot: "${removed.text}"`));
+  removeNode(nodeId);
+  saveGraph();
+  console.log(chalk.green(`\n  Forgot: "${node.text}"`));
   return true;
 }
 
 // /memory clear — delete all memories
 export function handleMemoryClear() {
-  mkdirSync(MEMORY_DIR, { recursive: true });
-  writeFileSync(join(MEMORY_DIR, 'memories.json'), '[]', 'utf-8');
+  saveGraph({ version: 1, nodes: {}, edges: [], adjacency: {} });
   console.log(chalk.green('\n  All memories cleared.'));
+  return true;
+}
+
+// /memory link <id1> <id2> [type] — create an edge
+export function handleMemoryLink(argsStr) {
+  const parts = argsStr.trim().split(/\s+/);
+  if (parts.length < 2) {
+    console.log(chalk.yellow('\n  Usage: /memory link <id1> <id2> [relates-to|depends-on|caused-by|prefers|references]'));
+    return true;
+  }
+  const [id1, id2] = parts;
+  const type = parts[2] || 'relates-to';
+  const edgeId = addEdge({ source: id1, target: id2, type });
+  if (!edgeId) {
+    console.log(chalk.yellow('\n  Could not create edge (nodes not found, at degree cap, or duplicate).'));
+    return true;
+  }
+  saveGraph();
+  console.log(chalk.green(`\n  Linked ${id1} --[${type}]--> ${id2}`));
+  return true;
+}
+
+// /memory related <id-or-text> — show connected nodes
+export function handleMemoryRelated(arg) {
+  const graph = loadGraph();
+  let nodeId = arg.trim();
+
+  // If not an ID, search by text
+  if (!nodeId.startsWith('n_')) {
+    const matches = findNodes({ query: nodeId });
+    if (matches.length === 0) {
+      console.log(chalk.dim(`\n  No memory matching "${nodeId}".`));
+      return true;
+    }
+    nodeId = matches[0].id;
+    console.log(chalk.dim(`\n  Showing relations for: ${matches[0].text}`));
+  }
+
+  const related = queryRelated(nodeId, 2);
+  if (related.length === 0) {
+    console.log(chalk.dim('\n  No connections found.'));
+    return true;
+  }
+
+  console.log(chalk.green(`\n  Related (${related.length}):`));
+  for (const { node, edge, depth } of related) {
+    const indent = '  '.repeat(depth);
+    console.log(`  ${indent}${chalk.dim(`--[${edge.type}]-->`)} ${chalk.cyan(`[${node.type}]`)} ${node.text}`);
+    console.log(`  ${indent}  ${chalk.dim(node.id)}`);
+  }
+  return true;
+}
+
+// /memory graph — compact text visualization
+export function handleMemoryGraph() {
+  const graph = loadGraph();
+  const nodes = Object.values(graph.nodes);
+
+  if (nodes.length === 0) {
+    console.log(chalk.dim('\n  Empty graph.'));
+    return true;
+  }
+
+  // Group by type
+  const byType = {};
+  for (const n of nodes) {
+    if (!byType[n.type]) byType[n.type] = [];
+    byType[n.type].push(n);
+  }
+
+  console.log(chalk.green(`\n  Memory Graph (${nodes.length} nodes, ${graph.edges.length} edges)`));
+  for (const [type, typeNodes] of Object.entries(byType)) {
+    console.log(chalk.cyan(`\n  [${type}] (${typeNodes.length})`));
+    for (const n of typeNodes) {
+      const edges = (graph.adjacency[n.id] || []).length;
+      const pin = n.pinned ? chalk.yellow('*') : ' ';
+      console.log(`  ${pin} ${chalk.white(n.text.slice(0, 60))}${n.text.length > 60 ? '...' : ''} ${chalk.dim(`(${edges} edges)`)}`);
+    }
+  }
+  return true;
+}
+
+// /memory pin <id> — toggle pinned status
+export function handleMemoryPin(arg) {
+  const nodeId = arg.trim();
+  const graph = loadGraph();
+  const node = graph.nodes[nodeId];
+  if (!node) {
+    console.log(chalk.yellow(`\n  Node not found: ${nodeId}`));
+    return true;
+  }
+  node.pinned = !node.pinned;
+  saveGraph();
+  console.log(chalk.green(`\n  ${node.pinned ? 'Pinned' : 'Unpinned'}: "${node.text}"`));
   return true;
 }
 
@@ -349,13 +473,14 @@ export async function handleResume(nameArg) {
   }
 }
 
-// Load memories for injection into system prompt
+// Load memories — delegates to graph system now
 export function loadMemories() {
-  try {
-    return JSON.parse(readFileSync(join(MEMORY_DIR, 'memories.json'), 'utf-8'));
-  } catch {
-    return [];
-  }
+  const graph = loadGraph();
+  return Object.values(graph.nodes).map(n => ({
+    text: n.text,
+    date: n.createdAt,
+    cwd: n.project,
+  }));
 }
 
 export function getMemoryDir() {
@@ -440,9 +565,13 @@ export function handleHelp() {
   console.log('  /save [name]     Save current session (default: timestamp)');
   console.log('  /resume [name]   Load a session or list all sessions');
   console.log('  /history [search] Browse past sessions');
-  console.log('  /memory save <t> Remember something across sessions');
-  console.log('  /memory list     Show all saved memories');
-  console.log('  /memory forget N Forget memory number N');
+  console.log('  /memory save <t> Remember something (graph memory)');
+  console.log('  /memory list     Show all memory nodes');
+  console.log('  /memory forget N Forget memory by number or ID');
+  console.log('  /memory link     Link two memories: /memory link <id1> <id2> [type]');
+  console.log('  /memory related  Show connections: /memory related <id or text>');
+  console.log('  /memory graph    Show memory graph overview');
+  console.log('  /memory pin <id> Toggle pin (protects from pruning)');
   console.log('  /memory clear    Clear all memories');
   console.log('  /model [name]    Show or change current model');
   console.log('  /pr [number]     View PR details or list open PRs');
@@ -656,12 +785,22 @@ export async function handleCommand(input, conversation) {
   }
   if (lower === '/memory list' || lower === '/memories') return handleMemoryList();
   if (lower === '/memory clear') return handleMemoryClear();
+  if (lower === '/memory graph') return handleMemoryGraph();
 
   if (lower.startsWith('/memory save ')) {
     return handleMemorySave(trimmed.slice('/memory save '.length));
   }
   if (lower.startsWith('/memory forget ')) {
     return handleMemoryForget(trimmed.slice('/memory forget '.length));
+  }
+  if (lower.startsWith('/memory link ')) {
+    return handleMemoryLink(trimmed.slice('/memory link '.length));
+  }
+  if (lower.startsWith('/memory related ')) {
+    return handleMemoryRelated(trimmed.slice('/memory related '.length));
+  }
+  if (lower.startsWith('/memory pin ')) {
+    return handleMemoryPin(trimmed.slice('/memory pin '.length));
   }
   if (lower.startsWith('/save')) {
     const nameArg = trimmed.slice('/save'.length).trim();

@@ -13,6 +13,7 @@ import * as patch from './patch.js';
 import * as lspTool from './lsp-tool.js';
 import * as githubTool from './github-tool.js';
 import * as sendMessage from './send-message.js';
+import * as memoryTool from './memory-tool.js';
 import { resolve } from 'node:path';
 import { isPlanMode, isToolAllowedInPlanMode, exitPlanMode, exitPlanModeDefinition, getPlanFilePath } from '../planmode.js';
 import { getMcpToolDefinitions, executeMcpTool, isMcpTool } from '../mcp.js';
@@ -37,12 +38,13 @@ const tools = {
 };
 
 const taskToolNames = new Set(['TaskCreate', 'TaskUpdate', 'TaskList']);
+const memoryToolNames = new Set(['MemoryStore', 'MemoryQuery']);
 
 const baseDefinitions = Object.values(tools).map(t => t.definition);
 
 // Dynamic: include ExitPlanMode tool when in plan mode, plus MCP tools and custom tools
 export function getToolDefinitions() {
-  const definitions = [...baseDefinitions, ...tasks.definitions, ...getMcpToolDefinitions(), ...getCustomToolDefinitions()];
+  const definitions = [...baseDefinitions, ...tasks.definitions, ...memoryTool.definitions, ...getMcpToolDefinitions(), ...getCustomToolDefinitions()];
   if (isPlanMode()) {
     return [...definitions, exitPlanModeDefinition];
   }
@@ -101,6 +103,19 @@ export async function executeTool(name, args) {
       args = { ...args, _bypassIgnore: true };
     } else if (!isToolAllowedInPlanMode(name)) {
       return `Blocked: ${name} is not available in plan mode. Only read-only tools are allowed. Use ExitPlanMode when your plan is ready.`;
+    }
+  }
+
+  // Handle memory tools
+  if (memoryToolNames.has(name)) {
+    try {
+      let result = await memoryTool.execute(name, args);
+      if (result.length > MAX_RESULT_LENGTH) {
+        result = result.slice(0, MAX_RESULT_LENGTH) + `\n... (truncated at ${MAX_RESULT_LENGTH} chars)`;
+      }
+      return result;
+    } catch (err) {
+      return `Tool error: ${err.message}`;
     }
   }
 

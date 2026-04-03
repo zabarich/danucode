@@ -4,15 +4,7 @@ import { resolve, dirname, join } from 'node:path';
 import { homedir } from 'node:os';
 import { getModePromptAddition } from './modes.js';
 import { loadIndex, getIndexSummary } from './indexer.js';
-
-function loadMemories() {
-  try {
-    const memoriesPath = join(homedir(), '.danu', 'memory', 'memories.json');
-    return JSON.parse(readFileSync(memoriesPath, 'utf-8'));
-  } catch {
-    return [];
-  }
-}
+import { getGraphMemorySection } from './memory.js';
 
 function getGitInfo() {
   try {
@@ -77,10 +69,7 @@ function loadInstructionContent(files) {
 }
 
 function getMemorySection() {
-  const memories = loadMemories();
-  if (memories.length === 0) return '';
-  const items = memories.map(m => `- ${m.text} (${m.date.split('T')[0]})`).join('\n');
-  return `\n\n## User Memories\n\n${items}`;
+  return getGraphMemorySection(process.cwd());
 }
 
 function getShell() {

@@ -12,7 +12,7 @@ const MODES = {
     name: 'Architect',
     description: 'Read-only + markdown. Design and plan.',
     color: 'blue',
-    allowedTools: new Set(['Read', 'Grep', 'Glob', 'WebSearch', 'WebFetch', 'Agent', 'Write', 'TaskCreate', 'TaskUpdate', 'TaskList']),
+    allowedTools: new Set(['Read', 'Grep', 'Glob', 'WebSearch', 'WebFetch', 'Agent', 'Write', 'TaskCreate', 'TaskUpdate', 'TaskList', 'MemoryQuery']),
     // Write is allowed but restricted to .md files — checked in tools/index.js
     writeRestriction: '.md',
     systemPromptAddition: `\n\n## Architect Mode\nYou are in Architect mode. Focus on system design, planning, and documentation. You can only write to markdown (.md) files. Analyze the codebase, design solutions, document architectures. Do not write code directly.`,
@@ -21,7 +21,7 @@ const MODES = {
     name: 'Ask',
     description: 'Read-only. Quick answers and explanations.',
     color: 'cyan',
-    allowedTools: new Set(['Read', 'Grep', 'Glob', 'WebSearch', 'WebFetch', 'TaskList']),
+    allowedTools: new Set(['Read', 'Grep', 'Glob', 'WebSearch', 'WebFetch', 'TaskList', 'MemoryQuery']),
     systemPromptAddition: `\n\n## Ask Mode\nYou are in Ask mode. Answer questions, explain code, provide documentation. You cannot modify files or run commands. Use Read, Grep, Glob to explore the codebase.`,
   },
   debug: {

@@ -48,6 +48,8 @@ const TOOL_CATEGORIES = {
   TaskCreate: Category.TASK,
   TaskUpdate: Category.TASK,
   TaskList: Category.TASK,
+  MemoryStore: Category.TASK,
+  MemoryQuery: Category.SEARCH,
 };
 
 const DANGER_TOOLS = new Set(['Bash']);
