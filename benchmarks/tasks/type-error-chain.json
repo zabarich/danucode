@@ -1,0 +1,21 @@
+{
+  "id": "type-error-chain",
+  "name": "Trace and fix a type error across 3 files",
+  "description": "A type mismatch propagates through three modules. Must trace the root cause and fix it in the right place.",
+  "difficulty": "hard",
+  "setup": {
+    "files": {
+      "src/types.js": "// Shared types\nexport function createResponse(status, data) {\n  return { status, data, timestamp: Date.now() };\n}\n\nexport function isSuccess(response) {\n  return response.status >= 200 && response.status < 300;\n}\n",
+      "src/api.js": "import { createResponse } from './types.js';\n\nexport async function fetchUsers() {\n  // Simulates an API call\n  const users = [\n    { id: 1, name: 'Alice', role: 'admin' },\n    { id: 2, name: 'Bob', role: 'user' },\n  ];\n  return createResponse('ok', users);\n}\n\nexport async function fetchUser(id) {\n  const users = (await fetchUsers()).data;\n  const user = users.find(u => u.id === id);\n  if (!user) return createResponse('not_found', null);\n  return createResponse('ok', user);\n}\n",
+      "src/controller.js": "import { fetchUsers, fetchUser } from './api.js';\nimport { isSuccess } from './types.js';\n\nexport async function handleGetUsers() {\n  const response = await fetchUsers();\n  if (!isSuccess(response)) {\n    return { error: 'Failed to fetch users', code: response.status };\n  }\n  return { users: response.data, count: response.data.length };\n}\n\nexport async function handleGetUser(id) {\n  const response = await fetchUser(id);\n  if (!isSuccess(response)) {\n    return { error: `User ${id} not found`, code: response.status };\n  }\n  return { user: response.data };\n}\n",
+      "test.js": "import { handleGetUsers, handleGetUser } from './src/controller.js';\nimport assert from 'node:assert/strict';\n\nconst usersResult = await handleGetUsers();\nassert.ok(usersResult.users, 'Should have users array');\nassert.equal(usersResult.count, 2);\nassert.ok(!usersResult.error, 'Should not have error');\n\nconst userResult = await handleGetUser(1);\nassert.ok(userResult.user, 'Should have user object');\nassert.equal(userResult.user.name, 'Alice');\nassert.ok(!userResult.error, 'Should not have error for existing user');\n\nconst missingResult = await handleGetUser(999);\nassert.ok(missingResult.error, 'Should have error for missing user');\nassert.equal(missingResult.code, 404);\n\nconsole.log('All tests passed');\n"
+    }
+  },
+  "prompt": "The tests in test.js are failing. The bug is a type mismatch that propagates through multiple files. Trace the root cause and fix it. Do not change test.js. Make `node test.js` pass.",
+  "verify": {
+    "command": "node test.js",
+    "expected_exit_code": 0,
+    "expected_stdout_contains": "All tests passed"
+  },
+  "metrics": ["pass", "tool_calls", "duration"]
+}

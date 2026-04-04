@@ -1,0 +1,19 @@
+{
+  "id": "regex-parser",
+  "name": "Build a config file parser from scratch",
+  "description": "Implement a parser for a simple key=value config format with sections, comments, and multiline values. No libraries.",
+  "difficulty": "hard",
+  "setup": {
+    "files": {
+      "src/parser.js": "// TODO: Implement parseConfig(text)\n// \n// Format:\n//   # comments start with #\n//   [section]        <- section header\n//   key = value      <- key-value pair (spaces around = are optional)\n//   key = \"multi     <- quoted values can span multiple\n//   line value\"         lines (closed by matching quote)\n//   key = 123        <- numeric values should be parsed as numbers\n//   key = true       <- boolean values should be parsed as booleans\n//\n// Returns: { section: { key: value, ... }, ... }\n// Keys outside any section go under 'default'\n//\nexport function parseConfig(text) {\n  // Implement this\n}\n",
+      "test.js": "import { parseConfig } from './src/parser.js';\nimport assert from 'node:assert/strict';\n\n// Basic key-value\nconst basic = parseConfig('name = Alice\\nage = 30\\nactive = true');\nassert.equal(basic.default.name, 'Alice');\nassert.equal(basic.default.age, 30);\nassert.equal(basic.default.active, true);\n\n// Sections\nconst sectioned = parseConfig(`\n[database]\nhost = localhost\nport = 5432\n\n[app]\ndebug = false\nname = MyApp\n`);\nassert.equal(sectioned.database.host, 'localhost');\nassert.equal(sectioned.database.port, 5432);\nassert.equal(sectioned.app.debug, false);\nassert.equal(sectioned.app.name, 'MyApp');\n\n// Comments and blank lines\nconst commented = parseConfig(`\n# This is a comment\nkey1 = value1\n\n# Another comment\nkey2 = value2\n`);\nassert.equal(commented.default.key1, 'value1');\nassert.equal(commented.default.key2, 'value2');\nassert.equal(Object.keys(commented.default).length, 2);\n\n// Multiline quoted values\nconst multiline = parseConfig(`\n[server]\ndescription = \"This is a\nmultiline\nvalue\"\nport = 8080\n`);\nassert.equal(multiline.server.description, 'This is a\\nmultiline\\nvalue');\nassert.equal(multiline.server.port, 8080);\n\n// Mixed default and sections\nconst mixed = parseConfig(`\nglobal_key = global_value\n\n[section1]\nkey = val1\n\n[section2]\nkey = val2\n`);\nassert.equal(mixed.default.global_key, 'global_value');\nassert.equal(mixed.section1.key, 'val1');\nassert.equal(mixed.section2.key, 'val2');\n\n// Edge cases\nconst edges = parseConfig(`\nspaced   =   lots of spaces   \nnoquote = simple value\nnum_zero = 0\nfalsy = false\nempty_section_before_content = yes\n[empty]\n[nonempty]\nkey = val\n`);\nassert.equal(edges.default.spaced, 'lots of spaces');\nassert.equal(edges.default.num_zero, 0);\nassert.equal(edges.default.falsy, false);\nassert.ok('empty' in edges, 'Empty section should exist');\nassert.equal(edges.nonempty.key, 'val');\n\n// Empty input\nconst empty = parseConfig('');\nassert.deepEqual(empty, { default: {} });\n\nconsole.log('All tests passed');\n"
+    }
+  },
+  "prompt": "Implement the parseConfig function in src/parser.js. Read the format specification in the comments and the test cases in test.js. Do not change test.js. Make `node test.js` pass.",
+  "verify": {
+    "command": "node test.js",
+    "expected_exit_code": 0,
+    "expected_stdout_contains": "All tests passed"
+  },
+  "metrics": ["pass", "tool_calls", "duration"]
+}

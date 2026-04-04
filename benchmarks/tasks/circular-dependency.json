@@ -1,0 +1,21 @@
+{
+  "id": "circular-dependency",
+  "name": "Break a circular dependency",
+  "description": "Three modules have circular imports that cause undefined at runtime. Must restructure without changing the public API.",
+  "difficulty": "hard",
+  "setup": {
+    "files": {
+      "src/user.js": "import { createLog } from './logger.js';\nimport { validateEmail } from './validator.js';\n\nexport function createUser(name, email) {\n  if (!validateEmail(email)) {\n    throw new Error(`Invalid email: ${email}`);\n  }\n  const user = { id: Math.random().toString(36).slice(2, 8), name, email };\n  createLog('user_created', `Created user ${name}`);\n  return user;\n}\n\nexport function formatUser(user) {\n  return `${user.name} <${user.email}>`;\n}\n",
+      "src/logger.js": "import { formatUser } from './user.js';\n\nconst logs = [];\n\nexport function createLog(type, message, user) {\n  const entry = {\n    type,\n    message,\n    user: user ? formatUser(user) : null,\n    timestamp: Date.now(),\n  };\n  logs.push(entry);\n  return entry;\n}\n\nexport function getLogs() {\n  return [...logs];\n}\n\nexport function clearLogs() {\n  logs.length = 0;\n}\n",
+      "src/validator.js": "import { createLog } from './logger.js';\n\nconst EMAIL_RE = /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/;\n\nexport function validateEmail(email) {\n  const valid = EMAIL_RE.test(email);\n  if (!valid) {\n    createLog('validation_failed', `Invalid email attempted: ${email}`);\n  }\n  return valid;\n}\n\nexport function validateName(name) {\n  return typeof name === 'string' && name.trim().length > 0;\n}\n",
+      "test.js": "import { createUser, formatUser } from './src/user.js';\nimport { createLog, getLogs, clearLogs } from './src/logger.js';\nimport { validateEmail, validateName } from './src/validator.js';\nimport assert from 'node:assert/strict';\n\n// Test basic functionality\nclearLogs();\n\nconst user = createUser('Alice', 'alice@example.com');\nassert.equal(user.name, 'Alice');\nassert.equal(user.email, 'alice@example.com');\nassert.ok(user.id);\n\nassert.equal(formatUser(user), 'Alice <alice@example.com>');\n\nassert.ok(validateEmail('test@test.com'));\nassert.ok(!validateEmail('invalid'));\nassert.ok(validateName('Bob'));\nassert.ok(!validateName(''));\n\n// Test logging works\nconst logs = getLogs();\nassert.ok(logs.length > 0, 'Should have logged user creation');\nassert.equal(logs[0].type, 'user_created');\n\n// Test logging with user formatting\nclearLogs();\ncreateLog('test', 'test message', user);\nconst testLogs = getLogs();\nassert.equal(testLogs[0].user, 'Alice <alice@example.com>');\n\n// Test validation logging\nclearLogs();\nassert.throws(() => createUser('Bad', 'notanemail'));\nconst validationLogs = getLogs();\nassert.ok(validationLogs.some(l => l.type === 'validation_failed'));\n\nconsole.log('All tests passed');\n"
+    }
+  },
+  "prompt": "The code has circular dependencies between user.js, logger.js, and validator.js that cause runtime errors. Restructure the code to break the circular dependency chain. The public API (exports from each file) must stay the same — test.js cannot be changed. Make `node test.js` pass.",
+  "verify": {
+    "command": "node test.js",
+    "expected_exit_code": 0,
+    "expected_stdout_contains": "All tests passed"
+  },
+  "metrics": ["pass", "tool_calls", "duration"]
+}

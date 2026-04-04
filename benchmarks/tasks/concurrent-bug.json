@@ -1,0 +1,19 @@
+{
+  "id": "concurrent-bug",
+  "name": "Fix a race condition in async code",
+  "description": "A cache module has a thundering herd problem. Multiple concurrent calls to the same key trigger duplicate fetches. Must implement proper deduplication.",
+  "difficulty": "hard",
+  "setup": {
+    "files": {
+      "src/cache.js": "const cache = new Map();\nlet fetchCount = 0;\n\nasync function expensiveFetch(key) {\n  fetchCount++;\n  await new Promise(r => setTimeout(r, 50));\n  return { key, value: `data-for-${key}`, fetchedAt: Date.now() };\n}\n\nexport async function getCached(key) {\n  if (cache.has(key)) {\n    return cache.get(key);\n  }\n  const result = await expensiveFetch(key);\n  cache.set(key, result);\n  return result;\n}\n\nexport function getFetchCount() {\n  return fetchCount;\n}\n\nexport function clearCache() {\n  cache.clear();\n  fetchCount = 0;\n}\n",
+      "test.js": "import { getCached, getFetchCount, clearCache } from './src/cache.js';\nimport assert from 'node:assert/strict';\n\n// Test 1: Basic caching works\nclearCache();\nconst r1 = await getCached('a');\nconst r2 = await getCached('a');\nassert.equal(r1.value, 'data-for-a');\nassert.equal(r1, r2, 'Second call should return cached result');\nassert.equal(getFetchCount(), 1, 'Should only fetch once for cached key');\n\n// Test 2: Different keys fetch separately\nclearCache();\nawait getCached('x');\nawait getCached('y');\nassert.equal(getFetchCount(), 2);\n\n// Test 3: THE HARD PART — concurrent calls to the same key\n// should only trigger ONE fetch, not multiple\nclearCache();\nconst concurrent = await Promise.all([\n  getCached('same'),\n  getCached('same'),\n  getCached('same'),\n  getCached('same'),\n  getCached('same'),\n]);\n\nassert.equal(getFetchCount(), 1, `Concurrent calls should deduplicate fetches. Got ${getFetchCount()} fetches instead of 1`);\nassert.ok(concurrent.every(r => r.value === 'data-for-same'), 'All should return same result');\nassert.ok(concurrent.every(r => r === concurrent[0]), 'All should be the exact same object reference');\n\n// Test 4: After resolution, subsequent calls still use cache\nconst afterConcurrent = await getCached('same');\nassert.equal(getFetchCount(), 1, 'Should still be 1 fetch after concurrent resolution');\nassert.equal(afterConcurrent, concurrent[0]);\n\nconsole.log('All tests passed');\n"
+    }
+  },
+  "prompt": "The cache in src/cache.js has a thundering herd bug: when multiple concurrent calls request the same key, it fetches multiple times instead of deduplicating. Fix getCached() so concurrent calls to the same key only trigger one fetch. Do not change test.js. Make `node test.js` pass.",
+  "verify": {
+    "command": "node test.js",
+    "expected_exit_code": 0,
+    "expected_stdout_contains": "All tests passed"
+  },
+  "metrics": ["pass", "tool_calls", "duration"]
+}
